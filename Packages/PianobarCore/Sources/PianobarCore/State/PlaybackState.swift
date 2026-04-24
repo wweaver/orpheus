@@ -54,6 +54,10 @@ public final class PlaybackState: ObservableObject {
         case .songBookmark, .artistBookmark: break
         case .stationFetchPlaylist: break
         case .stationsChanged(let s):
+            // Pianobar occasionally emits an empty stations list during
+            // transient errors (network blip, expired session being refreshed,
+            // etc.). Keep the last-known list rather than wiping the UI.
+            guard !s.isEmpty else { break }
             stations = s
             currentStation = stations.first { $0.name == currentSong?.stationName }
         case .stationCreated(let s):

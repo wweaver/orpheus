@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import Darwin
 import AppKit
+import Combine
 import PianobarCore
 
 @MainActor
@@ -19,6 +20,7 @@ final class AppBootstrap: ObservableObject {
     private var supervisorWatch: Task<Void, Never>?
     private var stationTracker: Task<Void, Never>?
     private var willTerminateObserver: NSObjectProtocol?
+    private var snapshotSubs = Set<AnyCancellable>()
 
     private var appSupportDir: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -47,8 +49,10 @@ final class AppBootstrap: ObservableObject {
         keychain.delete()
         UserDefaults.standard.removeObject(forKey: Prefs.Keys.lastStationName)
         UserDefaults.standard.removeObject(forKey: Prefs.Keys.lastStationId)
+        SessionStore.clear()
         stationTracker?.cancel()
         stationTracker = nil
+        snapshotSubs.removeAll()
         Task {
             try? await process?.stop()
             await bridge?.stop()
@@ -139,8 +143,6 @@ final class AppBootstrap: ObservableObject {
         // Either the pref is off, or the pidfile is stale / the process died.
         // Clean up any orphan pidfile so we don't keep thinking it's alive.
         PianobarPidFile.clear(at: pidFilePath)
-        // And forget any saved session — it only makes sense when we reattach.
-        SessionStore.clear()
 
         // Resolve pianobar path. Dev builds use Homebrew.
         let pianobarPath = resolvePianobarPath() ?? "/opt/homebrew/bin/pianobar"
@@ -172,9 +174,13 @@ final class AppBootstrap: ObservableObject {
         try? await b.start()
         bridge = b
 
-        // Wire up state
+        // Wire up state. Pre-populate with the last saved snapshot (if any) so
+        // the UI isn't blank during pianobar's startup; subsequent events
+        // overwrite it with fresh data.
         let state = PlaybackState(events: b.events)
+        restoreSnapshotIfAny(into: state, advanceProgress: false)
         playbackState = state
+        startSnapshotPersistence(state)
 
         // Start pianobar
         let logsDir = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
@@ -220,28 +226,14 @@ final class AppBootstrap: ObservableObject {
         bridge = b
 
         let state = PlaybackState(events: b.events)
-        playbackState = state
-
-        // Rehydrate from the snapshot taken at last quit so the UI isn't
-        // blank while we wait for pianobar's next event.
         let snapshot = SessionStore.load()
-        if let snap = snapshot {
-            let advancedProgress = snap.wasPlaying
-                ? min((snap.currentSong?.durationSeconds ?? 0),
-                      snap.progressSeconds + snap.elapsedSinceSavedSeconds)
-                : snap.progressSeconds
-            state.restoreSnapshot(
-                stations: snap.stations,
-                currentStation: snap.currentStation,
-                currentSong: snap.currentSong,
-                progressSeconds: advancedProgress,
-                isPlaying: false  // pianobar is currently paused; we'll flip below.
-            )
-        }
+        restoreSnapshotIfAny(into: state, advanceProgress: snapshot?.wasPlaying == true)
+        playbackState = state
+        startSnapshotPersistence(state)
 
         ctrl = PianobarCtrl(fifoPath: fifoPath)
-        // Reach across: no PianobarProcess, so no supervisor. The pid is
-        // tracked by the registry so ⌘Q still honors the keepAlive pref.
+        // No PianobarProcess; the pid stays in the registry so ⌘Q still
+        // honors the keepAlive pref.
 
         if let state = playbackState, let ctrl = ctrl {
             nowPlayingBridge = NowPlayingBridge(state: state, ctrl: ctrl)
@@ -254,9 +246,50 @@ final class AppBootstrap: ObservableObject {
                 Task { try? await ctrl.togglePlay(); state.setPlaying(true) }
             }
         }
+    }
 
-        // Consume the snapshot so we don't double-apply it next time.
-        SessionStore.clear()
+    /// Continuously snapshot the things the UI cares about. If the app is
+    /// idled out of memory, killed, or just relaunched, the next launch can
+    /// restore from this and avoid a blank player.
+    private func startSnapshotPersistence(_ state: PlaybackState) {
+        snapshotSubs.removeAll()
+        Publishers.CombineLatest3(state.$stations, state.$currentSong, state.$currentStation)
+            .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
+            .sink { [weak state] _, _, _ in
+                guard let s = state else { return }
+                // Skip writing a snapshot that would erase real data with
+                // emptiness — the cache should always reflect the best info
+                // we've ever seen this session.
+                guard !s.stations.isEmpty || s.currentSong != nil else { return }
+                let snap = SessionSnapshot(
+                    stations: s.stations,
+                    currentStation: s.currentStation,
+                    currentSong: s.currentSong,
+                    progressSeconds: s.progressSeconds,
+                    wasPlaying: s.isPlaying,
+                    savedAt: Date()
+                )
+                SessionStore.save(snap)
+            }
+            .store(in: &snapshotSubs)
+    }
+
+    /// Apply the latest cached snapshot so the UI isn't blank between launch
+    /// and pianobar's first event. Only clobbers fields that the snapshot has;
+    /// progress is reset because a fresh spawn always restarts the song.
+    private func restoreSnapshotIfAny(into state: PlaybackState, advanceProgress: Bool) {
+        guard let snap = SessionStore.load() else { return }
+        let progress = advanceProgress
+            ? min(snap.currentSong?.durationSeconds ?? 0,
+                  snap.progressSeconds + snap.elapsedSinceSavedSeconds)
+            : 0
+        state.restoreSnapshot(
+            stations: snap.stations,
+            currentStation: snap.currentStation,
+            currentSong: snap.currentSong,
+            progressSeconds: progress,
+            isPlaying: false
+        )
     }
 
     private func trackCurrentStation(_ state: PlaybackState) {

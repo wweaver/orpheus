@@ -6,27 +6,33 @@ struct NowPlayingView: View {
     let ctrl: PianobarCtrl
 
     var body: some View {
-        VStack(spacing: 20) {
-            albumArt
-                .frame(width: 240, height: 240)
-            if let song = state.currentSong {
-                VStack(spacing: 4) {
-                    Text(song.title).font(.title3).bold()
-                    Text(song.artist).font(.body).foregroundStyle(.secondary)
-                    Text(song.album).font(.callout).foregroundStyle(.tertiary)
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 16) {
+                albumArt
+                    .frame(maxWidth: 240, maxHeight: 240)
+                    .aspectRatio(1, contentMode: .fit)
+                if let song = state.currentSong {
+                    VStack(spacing: 4) {
+                        Text(song.title).font(.title3).bold()
+                            .lineLimit(2).multilineTextAlignment(.center)
+                        Text(song.artist).font(.body).foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        Text(song.album).font(.callout).foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                    }
+                } else {
+                    Text("Not playing").foregroundStyle(.secondary)
                 }
-            } else {
-                Text("Not playing").foregroundStyle(.secondary)
+
+                controls
+
+                progress
+
+                volume
             }
-
-            controls
-
-            progress
-
-            volume
+            .padding(20)
+            .frame(maxWidth: .infinity)
         }
-        .padding(24)
-        .frame(minWidth: 380)
     }
 
     @ViewBuilder private var albumArt: some View {

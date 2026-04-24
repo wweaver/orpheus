@@ -16,11 +16,16 @@ struct MainWindowView: View {
             } detail: {
                 NowPlayingView(state: state, ctrl: ctrl)
             }
-            .layoutPriority(1)  // Absorb flexible space, but let the history
-                                // drawer keep its intrinsic size when tight.
-            Divider()
-            HistoryView(state: state, ctrl: ctrl)
-                .fixedSize(horizontal: false, vertical: true)
+        }
+        // Anchor the history drawer to the bottom of the window; safeAreaInset
+        // guarantees the split view's content never overlaps it and the drawer
+        // never falls off-screen, regardless of window size.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 0) {
+                Divider()
+                HistoryView(state: state, ctrl: ctrl)
+            }
+            .background(.background)
         }
     }
 }
