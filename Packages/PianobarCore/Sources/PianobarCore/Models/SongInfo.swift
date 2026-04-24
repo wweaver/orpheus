@@ -1,6 +1,6 @@
 import Foundation
 
-public struct SongInfo: Equatable, Sendable {
+public struct SongInfo: Equatable, Sendable, Codable {
     public var title: String
     public var artist: String
     public var album: String

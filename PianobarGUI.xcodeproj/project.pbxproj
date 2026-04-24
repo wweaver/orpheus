@@ -11,6 +11,7 @@
 		0C943CC5A00CBFEDAB8F256D /* AppBootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12322653DF30954F37F01AF /* AppBootstrap.swift */; };
 		2B54E61E07F5174385F4A133 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCBC3E6F9EB0BCB3B76588B8 /* ErrorBanner.swift */; };
 		4E48D98913AF399C22FC6164 /* PianobarCore in Frameworks */ = {isa = PBXBuildFile; productRef = 150E4869B0E0764AD2D55501 /* PianobarCore */; };
+		563F4A76E47351576496291A /* SessionSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF6D2FDA80F91D75A970C43 /* SessionSnapshot.swift */; };
 		56B71C28564382892C6625CC /* NotificationPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D60D0DE7DD8F552AFC71D4F1 /* NotificationPresenter.swift */; };
 		5B38113740DE745403CDEAAC /* GlobalHotkeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48F5113C2E33A46619F61AB0 /* GlobalHotkeys.swift */; };
 		9043EC6B5D2ED6FA44E223DC /* MenuBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B27A33793EFCD536E4CE7D1 /* MenuBar.swift */; };
@@ -34,6 +35,7 @@
 		9CAC15D89B673192722274EC /* MainWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowView.swift; sourceTree = "<group>"; };
 		B2210E62872345F44D14C42F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C12322653DF30954F37F01AF /* AppBootstrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBootstrap.swift; sourceTree = "<group>"; };
+		CDF6D2FDA80F91D75A970C43 /* SessionSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSnapshot.swift; sourceTree = "<group>"; };
 		D60D0DE7DD8F552AFC71D4F1 /* NotificationPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPresenter.swift; sourceTree = "<group>"; };
 		DC907284417A2ED90AE92C82 /* PianobarGUIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PianobarGUIApp.swift; sourceTree = "<group>"; };
 		DCBC3E6F9EB0BCB3B76588B8 /* ErrorBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBanner.swift; sourceTree = "<group>"; };
@@ -82,6 +84,7 @@
 				B2210E62872345F44D14C42F /* Info.plist */,
 				DC907284417A2ED90AE92C82 /* PianobarGUIApp.swift */,
 				55E5367FD41FCDDF946E82B0 /* Prefs.swift */,
+				CDF6D2FDA80F91D75A970C43 /* SessionSnapshot.swift */,
 				5F1F9DCC9A37C23D6B265813 /* System */,
 				E355C11557A7995074C57C15 /* Views */,
 			);
@@ -196,6 +199,7 @@
 				E145C93EA899C688EB5E985A /* PianobarGUIApp.swift in Sources */,
 				BDEA039AC61C621EB3FCDD71 /* PreferencesView.swift in Sources */,
 				F40435B8A65FFE21EF7A36A1 /* Prefs.swift in Sources */,
+				563F4A76E47351576496291A /* SessionSnapshot.swift in Sources */,
 				F4E702972F0693C68B0B6784 /* StationsSidebarView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

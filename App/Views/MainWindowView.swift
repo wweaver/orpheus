@@ -16,8 +16,11 @@ struct MainWindowView: View {
             } detail: {
                 NowPlayingView(state: state, ctrl: ctrl)
             }
+            .layoutPriority(1)  // Absorb flexible space, but let the history
+                                // drawer keep its intrinsic size when tight.
             Divider()
             HistoryView(state: state, ctrl: ctrl)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

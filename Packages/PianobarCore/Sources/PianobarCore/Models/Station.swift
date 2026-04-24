@@ -1,6 +1,6 @@
 import Foundation
 
-public struct Station: Equatable, Identifiable, Sendable {
+public struct Station: Equatable, Identifiable, Sendable, Codable {
     public let id: String
     public var name: String
     public var isQuickMix: Bool

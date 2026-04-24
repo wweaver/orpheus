@@ -14,7 +14,8 @@ enum Prefs {
         static let lastStationId     = "lastStationId"         // legacy, kept for migration/cleanup
         static let stationClickCount = "stationClickCount"     // Int (1 or 2)
         static let eventDebugLog     = "eventDebugLog"         // Bool
-        static let keepPianobarAlive = "keepPianobarAlive"     // Bool
+        static let keepPianobarAlive = "keepPianobarAlive"     // Bool (experimental)
+        static let wasPlayingOnQuit  = "wasPlayingOnQuit"      // Bool (internal)
     }
 
     /// Defaults applied once at first launch if the key is missing.

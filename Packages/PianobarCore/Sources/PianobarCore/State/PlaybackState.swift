@@ -73,6 +73,22 @@ public final class PlaybackState: ObservableObject {
 
     public func setPlaying(_ playing: Bool) { isPlaying = playing }
 
+    /// Pre-populate state from a snapshot taken by a prior app session so the
+    /// UI isn't blank while we wait for pianobar's next event.
+    public func restoreSnapshot(
+        stations: [Station],
+        currentStation: Station?,
+        currentSong: SongInfo?,
+        progressSeconds: Int,
+        isPlaying: Bool
+    ) {
+        self.stations = stations
+        self.currentStation = currentStation
+        self.currentSong = currentSong
+        self.progressSeconds = progressSeconds
+        self.isPlaying = isPlaying
+    }
+
     public func setErrorBanner(_ message: String) {
         errorBanner = message
     }

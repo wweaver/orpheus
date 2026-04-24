@@ -87,12 +87,12 @@ struct PreferencesView: View {
     private var advanced: some View {
         tab {
             Form {
-                Toggle("Keep pianobar running when app quits", isOn: $keepPianobarAlive)
-                Text("Experimental. When enabled, quitting PianobarGUI leaves "
-                     + "pianobar playing in the background; relaunching "
-                     + "reattaches to the running instance so the current "
-                     + "song keeps playing without interruption. Disable and "
-                     + "quit once to stop pianobar cleanly.")
+                Toggle("Pause on quit, resume on launch", isOn: $keepPianobarAlive)
+                Text("Experimental. When enabled, quitting PianobarGUI pauses "
+                     + "pianobar and leaves it running in the background; "
+                     + "relaunching reattaches to the same instance and "
+                     + "resumes the paused song exactly where it left off. "
+                     + "Disable and quit once to stop pianobar cleanly.")
                     .font(.caption).foregroundStyle(.secondary)
 
                 Divider().padding(.vertical, 4)

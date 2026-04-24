@@ -1,5 +1,7 @@
 import Foundation
 import SwiftUI
+import Darwin
+import AppKit
 import PianobarCore
 
 @MainActor
@@ -16,6 +18,7 @@ final class AppBootstrap: ObservableObject {
     private var globalHotkeys: GlobalHotkeys?
     private var supervisorWatch: Task<Void, Never>?
     private var stationTracker: Task<Void, Never>?
+    private var willTerminateObserver: NSObjectProtocol?
 
     private var appSupportDir: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -60,6 +63,60 @@ final class AppBootstrap: ObservableObject {
         }
     }
 
+    /// Install a one-shot observer on NSApplication.willTerminateNotification
+    /// that pauses pianobar (by writing `p` to the FIFO) and persists a
+    /// SessionSnapshot so the next launch can restore the UI immediately.
+    /// Only runs when `keepPianobarAlive` is on — otherwise the atexit hook
+    /// kills the process anyway.
+    private func installTerminationHook() {
+        if let obs = willTerminateObserver {
+            NotificationCenter.default.removeObserver(obs)
+        }
+        willTerminateObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.handleWillTerminate()
+        }
+    }
+
+    private func handleWillTerminate() {
+        guard UserDefaults.standard.bool(forKey: Prefs.Keys.keepPianobarAlive),
+              let state = playbackState
+        else {
+            SessionStore.clear()
+            return
+        }
+
+        // Snapshot BEFORE we toggle pianobar's play state so the recorded
+        // `wasPlaying` reflects the user's actual situation.
+        let snapshot = SessionSnapshot(
+            stations: state.stations,
+            currentStation: state.currentStation,
+            currentSong: state.currentSong,
+            progressSeconds: state.progressSeconds,
+            wasPlaying: state.isPlaying,
+            savedAt: Date()
+        )
+        SessionStore.save(snapshot)
+
+        if state.isPlaying {
+            Self.writeFifoSync("p\n", at: fifoPath)
+        }
+    }
+
+    /// Synchronous write of a short command directly to pianobar's FIFO.
+    /// Safe to call from notification observers / terminate hooks where we
+    /// can't await the PianobarCtrl actor.
+    private static func writeFifoSync(_ command: String, at path: String) {
+        let fd = open(path, O_WRONLY | O_NONBLOCK)
+        guard fd >= 0 else { return }
+        defer { close(fd) }
+        _ = command.withCString { ptr in
+            Darwin.write(fd, ptr, strlen(ptr))
+        }
+    }
+
     private func launch(email: String, password: String) async {
         try? FileManager.default.createDirectory(at: appSupportDir, withIntermediateDirectories: true)
         try? FileManager.default.createDirectory(at: configDir, withIntermediateDirectories: true)
@@ -69,6 +126,7 @@ final class AppBootstrap: ObservableObject {
         // the user toggle the pref mid-session; the next quit honors the new
         // choice.
         PianobarPIDRegistry.shared.setExitAction(keepAlive ? .keepAlive : .kill)
+        installTerminationHook()
 
         // Fast path: an earlier session deliberately left pianobar running.
         // Reattach to it without rewriting config or spawning a new child.
@@ -81,6 +139,8 @@ final class AppBootstrap: ObservableObject {
         // Either the pref is off, or the pidfile is stale / the process died.
         // Clean up any orphan pidfile so we don't keep thinking it's alive.
         PianobarPidFile.clear(at: pidFilePath)
+        // And forget any saved session — it only makes sense when we reattach.
+        SessionStore.clear()
 
         // Resolve pianobar path. Dev builds use Homebrew.
         let pianobarPath = resolvePianobarPath() ?? "/opt/homebrew/bin/pianobar"
@@ -162,6 +222,23 @@ final class AppBootstrap: ObservableObject {
         let state = PlaybackState(events: b.events)
         playbackState = state
 
+        // Rehydrate from the snapshot taken at last quit so the UI isn't
+        // blank while we wait for pianobar's next event.
+        let snapshot = SessionStore.load()
+        if let snap = snapshot {
+            let advancedProgress = snap.wasPlaying
+                ? min((snap.currentSong?.durationSeconds ?? 0),
+                      snap.progressSeconds + snap.elapsedSinceSavedSeconds)
+                : snap.progressSeconds
+            state.restoreSnapshot(
+                stations: snap.stations,
+                currentStation: snap.currentStation,
+                currentSong: snap.currentSong,
+                progressSeconds: advancedProgress,
+                isPlaying: false  // pianobar is currently paused; we'll flip below.
+            )
+        }
+
         ctrl = PianobarCtrl(fifoPath: fifoPath)
         // Reach across: no PianobarProcess, so no supervisor. The pid is
         // tracked by the registry so ⌘Q still honors the keepAlive pref.
@@ -171,9 +248,15 @@ final class AppBootstrap: ObservableObject {
             notificationPresenter = NotificationPresenter(state: state, ctrl: ctrl)
             globalHotkeys = GlobalHotkeys(state: state, ctrl: ctrl)
             trackCurrentStation(state)
-            // No autoResume here — pianobar is still playing whatever it was
-            // playing before. UI will populate on the next songStart event.
+            // Resume playback if we paused it on the prior quit. Pianobar's
+            // `p` is a toggle, so one press flips paused → playing.
+            if snapshot?.wasPlaying == true {
+                Task { try? await ctrl.togglePlay(); state.setPlaying(true) }
+            }
         }
+
+        // Consume the snapshot so we don't double-apply it next time.
+        SessionStore.clear()
     }
 
     private func trackCurrentStation(_ state: PlaybackState) {
