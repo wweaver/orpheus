@@ -23,7 +23,14 @@ struct StationsSidebarView: View {
                 set: { newID in
                     if let id = newID,
                        let idx = state.stations.firstIndex(where: { $0.id == id }) {
-                        Task { try? await ctrl.switchStation(index: idx) }
+                        let isFirstSelection = state.currentSong == nil
+                        Task {
+                            if isFirstSelection {
+                                try? await ctrl.selectStationAtPrompt(index: idx)
+                            } else {
+                                try? await ctrl.switchStation(index: idx)
+                            }
+                        }
                     }
                 })) {
                 ForEach(filtered) { station in

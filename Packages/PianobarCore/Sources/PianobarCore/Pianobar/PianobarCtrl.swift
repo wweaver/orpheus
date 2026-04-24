@@ -27,6 +27,13 @@ public actor PianobarCtrl {
         try write("s\(index)\n")
     }
 
+    /// Answers pianobar's initial "Select station:" prompt on first launch.
+    /// Unlike `switchStation`, which uses the runtime `s<N>` command, this
+    /// sends the plain digits that pianobar expects at the startup prompt.
+    public func selectStationAtPrompt(index: Int) async throws {
+        try write("\(index)\n")
+    }
+
     public func createStationFromSong()   async throws { try write("c\n") }
     public func createStationFromArtist() async throws { try write("v\n") }
     public func deleteStation()           async throws { try write("d\n") }
