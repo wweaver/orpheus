@@ -73,6 +73,10 @@ public final class PlaybackState: ObservableObject {
 
     public func setPlaying(_ playing: Bool) { isPlaying = playing }
 
+    public func setErrorBanner(_ message: String) {
+        errorBanner = message
+    }
+
     public func dismissErrorBanner() {
         errorBanner = nil
     }

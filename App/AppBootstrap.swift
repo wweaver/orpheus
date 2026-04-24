@@ -14,6 +14,7 @@ final class AppBootstrap: ObservableObject {
     private var nowPlayingBridge: NowPlayingBridge?
     private var notificationPresenter: NotificationPresenter?
     private var globalHotkeys: GlobalHotkeys?
+    private var supervisorWatch: Task<Void, Never>?
 
     private var appSupportDir: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -91,6 +92,7 @@ final class AppBootstrap: ObservableObject {
         )
         try? await proc.start()
         process = proc
+        watchSupervisor(proc, state: state)
 
         // Commands
         ctrl = PianobarCtrl(fifoPath: fifoPath)
@@ -99,6 +101,17 @@ final class AppBootstrap: ObservableObject {
             nowPlayingBridge = NowPlayingBridge(state: state, ctrl: ctrl)
             notificationPresenter = NotificationPresenter(state: state, ctrl: ctrl)
             globalHotkeys = GlobalHotkeys(state: state, ctrl: ctrl)
+        }
+    }
+
+    private func watchSupervisor(_ proc: PianobarProcess, state: PlaybackState) {
+        supervisorWatch?.cancel()
+        supervisorWatch = Task { @MainActor [weak self, weak state] in
+            for await _ in proc.supervisorFailures {
+                state?.setErrorBanner("pianobar stopped responding. Click Retry to reconnect.")
+                self?.playbackState = nil  // force UI to show a "Starting…" or retry state
+                break
+            }
         }
     }
 
