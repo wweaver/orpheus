@@ -1,0 +1,31 @@
+name: PianobarGUI
+options:
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+packages:
+  PianobarCore:
+    path: Packages/PianobarCore
+targets:
+  PianobarGUI:
+    type: application
+    platform: macOS
+    sources:
+      - App
+    dependencies:
+      - package: PianobarCore
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: PianobarGUI
+        LSApplicationCategoryType: public.app-category.music
+        LSMinimumSystemVersion: "13.0"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.pianobar-gui.PianobarGUI
+        GENERATE_INFOPLIST_FILE: YES
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+        SWIFT_VERSION: 5.9
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
