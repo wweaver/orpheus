@@ -8,13 +8,16 @@ public actor PianobarProcess {
     private let executablePath: String
     private let xdgConfigHome: String
     private let eventSocketPath: String
+    private let logFileURL: URL?
     private var process: Process?
     private(set) var state: State = .stopped
 
-    public init(executablePath: String, xdgConfigHome: String, eventSocketPath: String) {
+    public init(executablePath: String, xdgConfigHome: String, eventSocketPath: String,
+                logFileURL: URL? = nil) {
         self.executablePath = executablePath
         self.xdgConfigHome = xdgConfigHome
         self.eventSocketPath = eventSocketPath
+        self.logFileURL = logFileURL
     }
 
     public func start() async throws {
@@ -27,9 +30,25 @@ public actor PianobarProcess {
             "XDG_CONFIG_HOME": xdgConfigHome,
             "PIANOBAR_GUI_SOCK": eventSocketPath,
         ]
-        // Discard stdout/stderr to /dev/null for now. Plan 2 will pipe to log file.
-        p.standardOutput = FileHandle(forWritingAtPath: "/dev/null")
-        p.standardError  = FileHandle(forWritingAtPath: "/dev/null")
+        // Pipe stdin from /dev/null so pianobar's interactive prompts never block.
+        p.standardInput = FileHandle(forReadingAtPath: "/dev/null")
+
+        // Capture stdout/stderr to the log file when configured; /dev/null otherwise.
+        let logHandle: FileHandle
+        if let url = logFileURL {
+            try? FileManager.default.createDirectory(
+                at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            if !FileManager.default.fileExists(atPath: url.path) {
+                FileManager.default.createFile(atPath: url.path, contents: nil)
+            }
+            logHandle = (try? FileHandle(forWritingTo: url))
+                ?? FileHandle(forWritingAtPath: "/dev/null")!
+            logHandle.seekToEndOfFile()
+        } else {
+            logHandle = FileHandle(forWritingAtPath: "/dev/null")!
+        }
+        p.standardOutput = logHandle
+        p.standardError  = logHandle
         do {
             try p.run()
         } catch {

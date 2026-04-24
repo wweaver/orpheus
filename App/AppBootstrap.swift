@@ -62,10 +62,13 @@ final class AppBootstrap: ObservableObject {
         playbackState = state
 
         // Start pianobar
+        let logURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Logs/PianobarGUI/pianobar.log")
         let proc = PianobarProcess(
             executablePath: pianobarPath,
             xdgConfigHome: appSupportDir.path,
-            eventSocketPath: socketPath
+            eventSocketPath: socketPath,
+            logFileURL: logURL
         )
         try? await proc.start()
         process = proc
