@@ -11,6 +11,7 @@ struct PreferencesView: View {
     @AppStorage(Prefs.Keys.autostartLastStation) var autostartLastStation: Bool = true
     @AppStorage(Prefs.Keys.stationClickCount) var stationClickCount: Int = 2
     @AppStorage(Prefs.Keys.eventDebugLog)     var eventDebugLog: Bool = false
+    @AppStorage(Prefs.Keys.keepPianobarAlive) var keepPianobarAlive: Bool = false
 
     var body: some View {
         TabView {
@@ -86,6 +87,16 @@ struct PreferencesView: View {
     private var advanced: some View {
         tab {
             Form {
+                Toggle("Keep pianobar running when app quits", isOn: $keepPianobarAlive)
+                Text("Experimental. When enabled, quitting PianobarGUI leaves "
+                     + "pianobar playing in the background; relaunching "
+                     + "reattaches to the running instance so the current "
+                     + "song keeps playing without interruption. Disable and "
+                     + "quit once to stop pianobar cleanly.")
+                    .font(.caption).foregroundStyle(.secondary)
+
+                Divider().padding(.vertical, 4)
+
                 Toggle("Log pianobar event payloads", isOn: $eventDebugLog)
                 Text("Writes every event payload (including coverArt) to "
                      + "~/Library/Logs/PianobarGUI/events.log. Restart the "

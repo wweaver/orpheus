@@ -24,6 +24,7 @@ final class AppBootstrap: ObservableObject {
     private var configDir: URL { appSupportDir.appendingPathComponent("pianobar") }
     private var socketPath: String { appSupportDir.appendingPathComponent("events.sock").path }
     private var fifoPath:   String { configDir.appendingPathComponent("ctl").path }
+    private var pidFilePath: String { appSupportDir.appendingPathComponent("pianobar.pid").path }
 
     func start() async {
         guard let creds = keychain.load() else {
@@ -62,6 +63,24 @@ final class AppBootstrap: ObservableObject {
     private func launch(email: String, password: String) async {
         try? FileManager.default.createDirectory(at: appSupportDir, withIntermediateDirectories: true)
         try? FileManager.default.createDirectory(at: configDir, withIntermediateDirectories: true)
+
+        let keepAlive = UserDefaults.standard.bool(forKey: Prefs.Keys.keepPianobarAlive)
+        // The atexit hook reads this flag at process exit. Setting it here lets
+        // the user toggle the pref mid-session; the next quit honors the new
+        // choice.
+        PianobarPIDRegistry.shared.setExitAction(keepAlive ? .keepAlive : .kill)
+
+        // Fast path: an earlier session deliberately left pianobar running.
+        // Reattach to it without rewriting config or spawning a new child.
+        if keepAlive, let existingPid = PianobarPidFile.existingLivePid(at: pidFilePath) {
+            PianobarPIDRegistry.shared.set(existingPid)
+            await attachToRunning(pid: existingPid)
+            return
+        }
+
+        // Either the pref is off, or the pidfile is stale / the process died.
+        // Clean up any orphan pidfile so we don't keep thinking it's alive.
+        PianobarPidFile.clear(at: pidFilePath)
 
         // Resolve pianobar path. Dev builds use Homebrew.
         let pianobarPath = resolvePianobarPath() ?? "/opt/homebrew/bin/pianobar"
@@ -109,7 +128,8 @@ final class AppBootstrap: ObservableObject {
             xdgConfigHome: appSupportDir.path,
             eventSocketPath: socketPath,
             logFileURL: logURL,
-            eventDebugLogURL: eventLogURL
+            eventDebugLogURL: eventLogURL,
+            pidFilePath: pidFilePath
         )
         try? await proc.start()
         process = proc
@@ -124,6 +144,35 @@ final class AppBootstrap: ObservableObject {
             globalHotkeys = GlobalHotkeys(state: state, ctrl: ctrl)
             trackCurrentStation(state)
             autoResumeLastStation(state: state, ctrl: ctrl)
+        }
+    }
+
+    /// Attach to a pianobar process left running by a previous app session
+    /// (Prefs.Keys.keepPianobarAlive). We don't own the Process object, so
+    /// there's no supervisor; commands still flow via the FIFO and events via
+    /// a freshly-bound socket at the same path.
+    private func attachToRunning(pid: pid_t) async {
+        // Re-create the event socket at the same path — event_bridge.sh will
+        // connect there on pianobar's next event. The FIFO lives on disk and
+        // still has pianobar as reader, so we just open the writer end.
+        guard let b = try? EventBridge(socketPath: socketPath) else { return }
+        try? await b.start()
+        bridge = b
+
+        let state = PlaybackState(events: b.events)
+        playbackState = state
+
+        ctrl = PianobarCtrl(fifoPath: fifoPath)
+        // Reach across: no PianobarProcess, so no supervisor. The pid is
+        // tracked by the registry so ⌘Q still honors the keepAlive pref.
+
+        if let state = playbackState, let ctrl = ctrl {
+            nowPlayingBridge = NowPlayingBridge(state: state, ctrl: ctrl)
+            notificationPresenter = NotificationPresenter(state: state, ctrl: ctrl)
+            globalHotkeys = GlobalHotkeys(state: state, ctrl: ctrl)
+            trackCurrentStation(state)
+            // No autoResume here — pianobar is still playing whatever it was
+            // playing before. UI will populate on the next songStart event.
         }
     }
 

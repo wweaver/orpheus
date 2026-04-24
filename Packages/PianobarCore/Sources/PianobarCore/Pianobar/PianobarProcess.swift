@@ -5,14 +5,21 @@ import Darwin
 /// an `atexit` hook so ⌘Q / `NSApp.terminate(_:)` reliably kills pianobar even
 /// though the Swift actor that owns it can't be awaited from a C callback.
 public final class PianobarPIDRegistry: @unchecked Sendable {
+    public enum ExitAction: Sendable { case kill, keepAlive }
+
     public static let shared = PianobarPIDRegistry()
     private let lock = NSLock()
     private var pid: pid_t = 0
+    private var action: ExitAction = .kill
 
     private init() {
         atexit {
-            let p = PianobarPIDRegistry.shared.take()
-            if p > 0 { _ = kill(p, SIGTERM) }
+            let (p, a) = PianobarPIDRegistry.shared.snapshot()
+            if p > 0, a == .kill {
+                _ = kill(p, SIGTERM)
+            }
+            // .keepAlive: leave the child running; a future launch will
+            // reattach via the pidfile.
         }
     }
 
@@ -26,10 +33,41 @@ public final class PianobarPIDRegistry: @unchecked Sendable {
         if pid == oldPid { pid = 0 }
     }
 
-    /// Read and zero in one shot so the atexit handler is idempotent.
-    private func take() -> pid_t {
+    public func setExitAction(_ action: ExitAction) {
         lock.lock(); defer { lock.unlock() }
-        let p = pid; pid = 0; return p
+        self.action = action
+    }
+
+    private func snapshot() -> (pid_t, ExitAction) {
+        lock.lock(); defer { lock.unlock() }
+        return (pid, action)
+    }
+}
+
+/// Lightweight pidfile helper. Writes and reads a single integer pid at a
+/// caller-chosen path. Used to let a later app launch discover a pianobar
+/// that was deliberately left running (see `Prefs.Keys.keepPianobarAlive`).
+public enum PianobarPidFile {
+    public static func write(_ pid: pid_t, to path: String) {
+        try? "\(pid)".write(toFile: path, atomically: true, encoding: .utf8)
+    }
+
+    public static func read(at path: String) -> pid_t? {
+        guard let s = try? String(contentsOfFile: path, encoding: .utf8),
+              let pid = pid_t(s.trimmingCharacters(in: .whitespacesAndNewlines)),
+              pid > 0
+        else { return nil }
+        return pid
+    }
+
+    public static func clear(at path: String) {
+        try? FileManager.default.removeItem(atPath: path)
+    }
+
+    /// Returns a pid if the file points to a process that is alive, else nil.
+    public static func existingLivePid(at path: String) -> pid_t? {
+        guard let pid = read(at: path) else { return nil }
+        return kill(pid, 0) == 0 ? pid : nil
     }
 }
 
@@ -43,6 +81,7 @@ public actor PianobarProcess {
     private let eventSocketPath: String
     private let logFileURL: URL?
     private let eventDebugLogURL: URL?
+    private let pidFilePath: String?
     private let supervisorBackoff: [TimeInterval]
     private var process: Process?
     private(set) var state: State = .stopped
@@ -58,12 +97,14 @@ public actor PianobarProcess {
                 eventSocketPath: String,
                 logFileURL: URL? = nil,
                 eventDebugLogURL: URL? = nil,
+                pidFilePath: String? = nil,
                 supervisorBackoff: [TimeInterval] = [1, 2, 4, 8, 16, 30]) {
         self.executablePath = executablePath
         self.xdgConfigHome = xdgConfigHome
         self.eventSocketPath = eventSocketPath
         self.logFileURL = logFileURL
         self.eventDebugLogURL = eventDebugLogURL
+        self.pidFilePath = pidFilePath
         self.supervisorBackoff = supervisorBackoff
 
         var cont: AsyncStream<Void>.Continuation!
@@ -88,6 +129,7 @@ public actor PianobarProcess {
         p.terminate()
         p.waitUntilExit()
         PianobarPIDRegistry.shared.clear(pid)
+        if let path = pidFilePath { PianobarPidFile.clear(at: path) }
         process = nil
         state = .stopped
     }
@@ -148,6 +190,9 @@ public actor PianobarProcess {
         }
         process = p
         PianobarPIDRegistry.shared.set(p.processIdentifier)
+        if let path = pidFilePath {
+            PianobarPidFile.write(p.processIdentifier, to: path)
+        }
     }
 
     private func waitForExit() async {
