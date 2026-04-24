@@ -48,20 +48,20 @@ private struct StationsList: View {
     var body: some View {
         List(selection: $selection) {
             ForEach(filtered) { station in
-                row(for: station).tag(station.id)
+                row(for: station)
+                    .tag(station.id)
+                    // Per-row simultaneousGesture so List's native single-click
+                    // selection still fires. The subview extraction (above)
+                    // keeps the row stable across progress-ticker re-renders,
+                    // so the gesture recognizer doesn't get torn down mid-click.
+                    .simultaneousGesture(
+                        TapGesture(count: 2).onEnded {
+                            if clickCount == 2 { switchTo(station) }
+                        }
+                    )
             }
         }
         .listStyle(.sidebar)
-        // Double-click anywhere on the list fires the switch using the
-        // selection that the single-click just updated. This avoids per-row
-        // gesture recognizers fighting List's native selection behavior.
-        .onTapGesture(count: 2) {
-            guard clickCount == 2,
-                  let id = selection,
-                  let station = stations.first(where: { $0.id == id })
-            else { return }
-            switchTo(station)
-        }
         .onChange(of: selection) { newID in
             guard !programmaticSelection else {
                 programmaticSelection = false
