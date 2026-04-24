@@ -11,6 +11,7 @@ final class AppBootstrap: ObservableObject {
     private let keychain = KeychainStore(service: "org.pianobar-gui.PianobarGUI.pandora")
     private var bridge: EventBridge?
     private var process: PianobarProcess?
+    private var nowPlayingBridge: NowPlayingBridge?
 
     private var appSupportDir: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -75,6 +76,10 @@ final class AppBootstrap: ObservableObject {
 
         // Commands
         ctrl = PianobarCtrl(fifoPath: fifoPath)
+
+        if let state = playbackState, let ctrl = ctrl {
+            nowPlayingBridge = NowPlayingBridge(state: state, ctrl: ctrl)
+        }
     }
 
     private func resolvePianobarPath() -> String? {
