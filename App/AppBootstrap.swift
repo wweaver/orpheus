@@ -12,6 +12,7 @@ final class AppBootstrap: ObservableObject {
     private var bridge: EventBridge?
     private var process: PianobarProcess?
     private var nowPlayingBridge: NowPlayingBridge?
+    private var notificationPresenter: NotificationPresenter?
 
     private var appSupportDir: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -79,6 +80,7 @@ final class AppBootstrap: ObservableObject {
 
         if let state = playbackState, let ctrl = ctrl {
             nowPlayingBridge = NowPlayingBridge(state: state, ctrl: ctrl)
+            notificationPresenter = NotificationPresenter(state: state, ctrl: ctrl)
         }
     }
 
