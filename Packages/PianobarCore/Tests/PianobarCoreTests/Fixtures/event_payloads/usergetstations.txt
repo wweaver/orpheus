@@ -1,0 +1,10 @@
+station0=Imagine Dragons Radio
+stationId0=123
+station1=Bad Bunny 360° Radio
+stationId1=456
+station2=The Beatles Radio
+stationId2=789
+pRet=1
+pRetStr=Everything is fine :)
+wRet=0
+wRetStr=OK

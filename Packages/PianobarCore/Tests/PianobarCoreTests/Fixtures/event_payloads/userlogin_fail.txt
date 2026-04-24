@@ -1,0 +1,4 @@
+pRet=13
+pRetStr=Invalid login
+wRet=0
+wRetStr=OK

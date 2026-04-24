@@ -1,0 +1,4 @@
+pRet=1
+pRetStr=Everything is fine :)
+wRet=0
+wRetStr=OK
