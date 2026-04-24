@@ -13,10 +13,7 @@ struct PianobarGUIApp: App {
                         bootstrap.saveCredentials(email: email, password: password)
                     })
                 } else if let state = bootstrap.playbackState, let ctrl = bootstrap.ctrl {
-                    // MainWindowView is added in Task 13; for Task 10 the placeholder below is fine.
-                    Text("Signed in. Waiting for MainWindowView (Task 13)…")
-                        .padding()
-                        .onAppear { _ = state; _ = ctrl }
+                    MainWindowView(state: state, ctrl: ctrl)
                 } else {
                     ProgressView("Starting…").padding()
                 }
