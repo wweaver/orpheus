@@ -41,6 +41,7 @@ final class AppBootstrap: ObservableObject {
 
     func signOut() {
         keychain.delete()
+        UserDefaults.standard.removeObject(forKey: Prefs.Keys.lastStationName)
         UserDefaults.standard.removeObject(forKey: Prefs.Keys.lastStationId)
         stationTracker?.cancel()
         stationTracker = nil
@@ -67,21 +68,21 @@ final class AppBootstrap: ObservableObject {
 
         let eventBridgePath = PianobarCoreResources.eventBridgeScriptURL.path
 
-        // Write config. If the user asked to resume their last station, tell
-        // pianobar via `autostart_station` so it skips the "Select station" prompt.
-        let autostartId: String? = {
-            guard UserDefaults.standard.bool(forKey: Prefs.Keys.autostartLastStation)
-            else { return nil }
-            let id = UserDefaults.standard.string(forKey: Prefs.Keys.lastStationId)
-            return (id?.isEmpty == false) ? id : nil
-        }()
+        // Pianobar's event_command on this version only emits station names,
+        // not the Pandora station IDs that `autostart_station` needs. Instead
+        // of setting that config key, we let pianobar land at its first-run
+        // "Select station:" prompt and then auto-answer it below, once the
+        // stations list has been reported.
         let audioQuality = ConfigManager.AudioQuality(
             rawValue: UserDefaults.standard.string(forKey: Prefs.Keys.audioQuality) ?? "high"
         ) ?? .high
         try? ConfigManager(configDir: configDir).writeConfig(
             email: email, password: password, audioQuality: audioQuality,
             eventBridgePath: eventBridgePath, fifoPath: fifoPath,
-            autostartStationId: autostartId)
+            autostartStationId: nil)
+        // Clean up any legacy id we previously wrote — it was just the list
+        // index and never actually worked for auto-resume.
+        UserDefaults.standard.removeObject(forKey: Prefs.Keys.lastStationId)
 
         // Make FIFO
         unlink(fifoPath)
@@ -122,6 +123,7 @@ final class AppBootstrap: ObservableObject {
             notificationPresenter = NotificationPresenter(state: state, ctrl: ctrl)
             globalHotkeys = GlobalHotkeys(state: state, ctrl: ctrl)
             trackCurrentStation(state)
+            autoResumeLastStation(state: state, ctrl: ctrl)
         }
     }
 
@@ -130,12 +132,38 @@ final class AppBootstrap: ObservableObject {
         stationTracker = Task { @MainActor [weak state] in
             var lastSaved: String?
             while !Task.isCancelled {
-                let id = state?.currentStation?.id
-                if let id, id != lastSaved {
-                    UserDefaults.standard.set(id, forKey: Prefs.Keys.lastStationId)
-                    lastSaved = id
+                let name = state?.currentStation?.name
+                if let name, name != lastSaved {
+                    UserDefaults.standard.set(name, forKey: Prefs.Keys.lastStationName)
+                    lastSaved = name
                 }
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
+            }
+        }
+    }
+
+    /// After pianobar sends its stations list, look up the saved station by
+    /// name and tell pianobar to select it. This bypasses the first-run
+    /// "Select station:" prompt without needing a real Pandora station id.
+    private func autoResumeLastStation(state: PlaybackState, ctrl: PianobarCtrl) {
+        guard UserDefaults.standard.bool(forKey: Prefs.Keys.autostartLastStation),
+              let savedName = UserDefaults.standard.string(forKey: Prefs.Keys.lastStationName),
+              !savedName.isEmpty
+        else { return }
+
+        Task { @MainActor [weak state] in
+            let deadline = Date().addingTimeInterval(10)
+            while Date() < deadline {
+                if let s = state, !s.stations.isEmpty {
+                    // Already playing a song (e.g. a previous session left
+                    // pianobar in runtime mode somehow) — nothing to do.
+                    if s.currentSong != nil { return }
+                    if let idx = s.stations.firstIndex(where: { $0.name == savedName }) {
+                        try? await ctrl.selectStationAtPrompt(index: idx)
+                    }
+                    return
+                }
+                try? await Task.sleep(nanoseconds: 250_000_000)
             }
         }
     }

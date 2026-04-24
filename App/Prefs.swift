@@ -10,7 +10,8 @@ enum Prefs {
         static let menuBarShowTitle  = "menuBarShowTitle"      // Bool
         static let menuBarMaxWidth   = "menuBarMaxWidth"       // Int (chars)
         static let autostartLastStation = "autostartLastStation" // Bool
-        static let lastStationId     = "lastStationId"         // String (Pandora station id)
+        static let lastStationName   = "lastStationName"       // String (station display name)
+        static let lastStationId     = "lastStationId"         // legacy, kept for migration/cleanup
         static let stationClickCount = "stationClickCount"     // Int (1 or 2)
         static let eventDebugLog     = "eventDebugLog"         // Bool
     }
