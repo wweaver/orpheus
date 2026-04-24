@@ -9,6 +9,9 @@ struct PianobarGUIApp: App {
 
     init() {
         Prefs.registerDefaults()
+        // Touch the registry so its atexit handler is installed before any
+        // pianobar child is spawned.
+        _ = PianobarPIDRegistry.shared
     }
 
     var body: some Scene {

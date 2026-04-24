@@ -1,4 +1,37 @@
 import Foundation
+import Darwin
+
+/// Atomically-tracked PID of the most recently spawned pianobar child. Used by
+/// an `atexit` hook so ⌘Q / `NSApp.terminate(_:)` reliably kills pianobar even
+/// though the Swift actor that owns it can't be awaited from a C callback.
+public final class PianobarPIDRegistry: @unchecked Sendable {
+    public static let shared = PianobarPIDRegistry()
+    private let lock = NSLock()
+    private var pid: pid_t = 0
+
+    private init() {
+        atexit {
+            let p = PianobarPIDRegistry.shared.take()
+            if p > 0 { _ = kill(p, SIGTERM) }
+        }
+    }
+
+    public func set(_ newPid: pid_t) {
+        lock.lock(); defer { lock.unlock() }
+        pid = newPid
+    }
+
+    public func clear(_ oldPid: pid_t) {
+        lock.lock(); defer { lock.unlock() }
+        if pid == oldPid { pid = 0 }
+    }
+
+    /// Read and zero in one shot so the atexit handler is idempotent.
+    private func take() -> pid_t {
+        lock.lock(); defer { lock.unlock() }
+        let p = pid; pid = 0; return p
+    }
+}
 
 public actor PianobarProcess {
     public enum Error: Swift.Error { case notRunning, spawnFailed(String) }
@@ -51,8 +84,10 @@ public actor PianobarProcess {
         supervisorTask?.cancel()
         supervisorTask = nil
         guard let p = process else { state = .stopped; return }
+        let pid = p.processIdentifier
         p.terminate()
         p.waitUntilExit()
+        PianobarPIDRegistry.shared.clear(pid)
         process = nil
         state = .stopped
     }
@@ -112,10 +147,12 @@ public actor PianobarProcess {
             throw Error.spawnFailed(String(describing: error))
         }
         process = p
+        PianobarPIDRegistry.shared.set(p.processIdentifier)
     }
 
     private func waitForExit() async {
         guard let p = process else { return }
+        let pid = p.processIdentifier
         await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
             p.terminationHandler = { _ in
                 cont.resume()
@@ -127,6 +164,7 @@ public actor PianobarProcess {
                 cont.resume()
             }
         }
+        PianobarPIDRegistry.shared.clear(pid)
         process = nil
     }
 

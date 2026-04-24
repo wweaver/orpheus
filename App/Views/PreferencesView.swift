@@ -21,68 +21,105 @@ struct PreferencesView: View {
             advanced.tabItem { Label("Advanced", systemImage: "ladybug") }
             account.tabItem { Label("Account", systemImage: "person.crop.circle") }
         }
-        .frame(width: 460, height: 320)
-        .padding(20)
+        .frame(width: 520, height: 380)
     }
 
     private var general: some View {
-        Form {
-            Picker("Audio quality", selection: $audioQuality) {
-                Text("Low").tag("low")
-                Text("Medium").tag("medium")
-                Text("High").tag("high")
+        tab {
+            Form {
+                Picker("Audio quality", selection: $audioQuality) {
+                    Text("Low").tag("low")
+                    Text("Medium").tag("medium")
+                    Text("High").tag("high")
+                }
+                Toggle("Resume last station on launch", isOn: $autostartLastStation)
+                Picker("Station click to switch", selection: $stationClickCount) {
+                    Text("Single-click").tag(1)
+                    Text("Double-click").tag(2)
+                }
+                .pickerStyle(.segmented)
             }
-            Toggle("Resume last station on launch", isOn: $autostartLastStation)
-            Picker("Station click to switch", selection: $stationClickCount) {
-                Text("Single-click").tag(1)
-                Text("Double-click").tag(2)
-            }
-            .pickerStyle(.segmented)
+            .formStyle(.grouped)
         }
     }
 
     private var menuBar: some View {
-        Form {
-            Toggle("Show artist", isOn: $menuBarShowArtist)
-            Toggle("Show title",  isOn: $menuBarShowTitle)
-            Stepper(value: $menuBarMaxWidth, in: 10...100) {
-                Text("Max width: \(menuBarMaxWidth)")
+        tab {
+            Form {
+                Toggle("Show artist", isOn: $menuBarShowArtist)
+                Toggle("Show title",  isOn: $menuBarShowTitle)
+                Stepper(value: $menuBarMaxWidth, in: 10...100) {
+                    Text("Max width: \(menuBarMaxWidth) characters")
+                }
             }
+            .formStyle(.grouped)
         }
     }
 
     private var notifications: some View {
-        Form {
-            Toggle("Notify on song change", isOn: $showNotifications)
+        tab {
+            Form {
+                Toggle("Notify on song change", isOn: $showNotifications)
+                Text("If notifications don't appear, make sure "
+                     + "PianobarGUI is allowed to notify in "
+                     + "System Settings → Notifications.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            .formStyle(.grouped)
         }
     }
 
     private var hotkeys: some View {
-        Form {
-            Text("Hotkey configuration coming soon. To set a hotkey manually, "
-                 + "write `<keyCode>,<modifierMask>` to the `hotkey.<action>` "
-                 + "UserDefaults key.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        tab {
+            Form {
+                Text("Hotkey configuration UI coming soon.")
+                Text("To bind a hotkey manually, write "
+                     + "`<keyCode>,<modifierMask>` to the "
+                     + "`hotkey.<action>` UserDefaults key with the "
+                     + "`defaults write` command.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            .formStyle(.grouped)
         }
     }
 
     private var advanced: some View {
-        Form {
-            Toggle("Log pianobar event payloads", isOn: $eventDebugLog)
-            Text("Writes every event payload (including coverArt) to "
-                 + "~/Library/Logs/PianobarGUI/events.log. Restart the app "
-                 + "after toggling. Leave off in normal use.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        tab {
+            Form {
+                Toggle("Log pianobar event payloads", isOn: $eventDebugLog)
+                Text("Writes every event payload (including coverArt) to "
+                     + "~/Library/Logs/PianobarGUI/events.log. Restart the "
+                     + "app after toggling. Leave off in normal use.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            .formStyle(.grouped)
         }
     }
 
     private var account: some View {
-        Form {
-            Button("Sign Out") {
-                bootstrap.signOut()
+        tab {
+            Form {
+                Button(role: .destructive) {
+                    bootstrap.signOut()
+                } label: {
+                    Text("Sign Out of Pandora")
+                }
+                Text("Signing out stops playback, clears the stored Pandora "
+                     + "credentials from the macOS Keychain, and forgets your "
+                     + "last station.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
+            .formStyle(.grouped)
         }
+    }
+
+    /// Shared layout for every tab — gives each a consistent padded frame.
+    @ViewBuilder
+    private func tab<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            content()
+            Spacer(minLength: 0)
+        }
+        .padding(24)
     }
 }

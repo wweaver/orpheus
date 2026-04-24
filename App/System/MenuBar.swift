@@ -125,23 +125,17 @@ private struct MenuBarCommands: View {
 // MARK: - Actions
 
 enum MenuBarActions {
+    /// Delegates to SwiftUI's WindowGroup `openWindow`. If the main window is
+    /// already open, SwiftUI brings it forward; if it was closed it rebuilds
+    /// a fresh instance from the scene. This is more reliable than poking at
+    /// NSApp.windows, which gets confused when Settings is also open.
     static func showMainWindow(openWindow: OpenWindowAction) {
         NSApp.activate(ignoringOtherApps: true)
-        if let existing = NSApp.windows.first(where: { isMainAppWindow($0) }) {
-            existing.makeKeyAndOrderFront(nil)
-        } else {
-            openWindow(id: "main")
-        }
+        openWindow(id: "main")
     }
 
     static func openSettings() {
         NSApp.activate(ignoringOtherApps: true)
         NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-    }
-
-    private static func isMainAppWindow(_ window: NSWindow) -> Bool {
-        let cls = String(describing: type(of: window))
-        if cls.contains("Settings") { return false }
-        return window.canBecomeKey && window.contentViewController != nil
     }
 }

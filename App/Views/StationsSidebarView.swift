@@ -5,16 +5,6 @@ struct StationsSidebarView: View {
     @ObservedObject var state: PlaybackState
     let ctrl: PianobarCtrl
     @State private var filter: String = ""
-    @State private var selection: String?
-    @State private var programmaticSelection: Bool = false
-    @AppStorage(Prefs.Keys.stationClickCount) private var clickCount: Int = 2
-
-    var filtered: [Station] {
-        guard !filter.isEmpty else { return state.stations }
-        return state.stations.filter {
-            $0.name.localizedCaseInsensitiveContains(filter)
-        }
-    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -24,45 +14,80 @@ struct StationsSidebarView: View {
                 .padding(.top, 32)
                 .padding(.bottom, 6)
 
-            List(selection: $selection) {
-                ForEach(filtered) { station in
-                    row(for: station)
-                        .tag(station.id)
-                        .simultaneousGesture(
-                            TapGesture(count: 2).onEnded {
-                                if clickCount == 2 { switchTo(station) }
-                            }
-                        )
-                }
-            }
-            .listStyle(.sidebar)
+            StationsList(
+                stations: state.stations,
+                currentStationId: state.currentStation?.id,
+                isFirstSelection: state.currentSong == nil,
+                filter: filter,
+                ctrl: ctrl
+            )
         }
         .frame(minWidth: 200)
+    }
+}
+
+/// Encapsulates the station list and selection gesture. Takes plain-value
+/// inputs so changes to unrelated PlaybackState fields (e.g. progressSeconds
+/// ticking every second) don't rebuild the List and interrupt gestures.
+private struct StationsList: View {
+    let stations: [Station]
+    let currentStationId: String?
+    let isFirstSelection: Bool
+    let filter: String
+    let ctrl: PianobarCtrl
+
+    @AppStorage(Prefs.Keys.stationClickCount) private var clickCount: Int = 2
+    @State private var selection: String?
+    @State private var programmaticSelection: Bool = false
+
+    private var filtered: [Station] {
+        guard !filter.isEmpty else { return stations }
+        return stations.filter { $0.name.localizedCaseInsensitiveContains(filter) }
+    }
+
+    var body: some View {
+        List(selection: $selection) {
+            ForEach(filtered) { station in
+                row(for: station).tag(station.id)
+            }
+        }
+        .listStyle(.sidebar)
+        // Double-click anywhere on the list fires the switch using the
+        // selection that the single-click just updated. This avoids per-row
+        // gesture recognizers fighting List's native selection behavior.
+        .onTapGesture(count: 2) {
+            guard clickCount == 2,
+                  let id = selection,
+                  let station = stations.first(where: { $0.id == id })
+            else { return }
+            switchTo(station)
+        }
         .onChange(of: selection) { newID in
-            // Ignore selections that came from state (programmatic) or no change.
             guard !programmaticSelection else {
                 programmaticSelection = false
                 return
             }
             guard clickCount == 1,
                   let id = newID,
-                  id != state.currentStation?.id,
-                  let station = state.stations.first(where: { $0.id == id })
+                  id != currentStationId,
+                  let station = stations.first(where: { $0.id == id })
             else { return }
             switchTo(station)
         }
-        .onChange(of: state.currentStation?.id) { newID in
-            // Reflect playback state into visual selection without triggering
-            // the user-click branch above.
+        .onChange(of: currentStationId) { newID in
             programmaticSelection = true
             selection = newID
+        }
+        .onAppear {
+            programmaticSelection = true
+            selection = currentStationId
         }
     }
 
     @ViewBuilder
     private func row(for station: Station) -> some View {
         HStack {
-            if state.currentStation?.id == station.id {
+            if currentStationId == station.id {
                 Image(systemName: "speaker.wave.2.fill")
                     .foregroundStyle(.secondary)
             }
@@ -71,11 +96,11 @@ struct StationsSidebarView: View {
     }
 
     private func switchTo(_ station: Station) {
-        guard let idx = state.stations.firstIndex(where: { $0.id == station.id })
+        guard let idx = stations.firstIndex(where: { $0.id == station.id })
         else { return }
-        let isFirstSelection = state.currentSong == nil
+        let firstSelection = isFirstSelection
         Task {
-            if isFirstSelection {
+            if firstSelection {
                 try? await ctrl.selectStationAtPrompt(index: idx)
             } else {
                 try? await ctrl.switchStation(index: idx)
