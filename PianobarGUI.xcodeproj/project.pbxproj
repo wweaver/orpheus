@@ -7,12 +7,17 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0C943CC5A00CBFEDAB8F256D /* AppBootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12322653DF30954F37F01AF /* AppBootstrap.swift */; };
 		4E48D98913AF399C22FC6164 /* PianobarCore in Frameworks */ = {isa = PBXBuildFile; productRef = 150E4869B0E0764AD2D55501 /* PianobarCore */; };
+		D6FDBE89C173B604A693917F /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42A133FADB073A0E23B2FEDE /* LoginView.swift */; };
+		E145C93EA899C688EB5E985A /* PianobarGUIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC907284417A2ED90AE92C82 /* PianobarGUIApp.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		006BE88805B7977EA5E28F00 /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		42A133FADB073A0E23B2FEDE /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		B2210E62872345F44D14C42F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		C12322653DF30954F37F01AF /* AppBootstrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBootstrap.swift; sourceTree = "<group>"; };
+		DC907284417A2ED90AE92C82 /* PianobarGUIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PianobarGUIApp.swift; sourceTree = "<group>"; };
 		E76EFE33F3068B7D1E59808D /* PianobarCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PianobarCore; path = Packages/PianobarCore; sourceTree = SOURCE_ROOT; };
 		EDC626EDA1076A67F46E8683 /* PianobarGUI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PianobarGUI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -40,8 +45,10 @@
 		6C8025875113B7478D241F75 /* App */ = {
 			isa = PBXGroup;
 			children = (
-				006BE88805B7977EA5E28F00 /* .gitkeep */,
+				C12322653DF30954F37F01AF /* AppBootstrap.swift */,
 				B2210E62872345F44D14C42F /* Info.plist */,
+				DC907284417A2ED90AE92C82 /* PianobarGUIApp.swift */,
+				E355C11557A7995074C57C15 /* Views */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -61,6 +68,14 @@
 				7F13F7D278681384C6D9A41D /* Packages */,
 				389715B26B8EC693F5BC13AF /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		E355C11557A7995074C57C15 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				42A133FADB073A0E23B2FEDE /* LoginView.swift */,
+			);
+			path = Views;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -127,6 +142,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0C943CC5A00CBFEDAB8F256D /* AppBootstrap.swift in Sources */,
+				D6FDBE89C173B604A693917F /* LoginView.swift in Sources */,
+				E145C93EA899C688EB5E985A /* PianobarGUIApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
