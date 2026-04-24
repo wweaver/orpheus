@@ -5,6 +5,10 @@ import PianobarCore
 struct PianobarGUIApp: App {
     @StateObject private var bootstrap = AppBootstrap()
 
+    init() {
+        Prefs.registerDefaults()
+    }
+
     var body: some Scene {
         WindowGroup("PianobarGUI") {
             Group {
