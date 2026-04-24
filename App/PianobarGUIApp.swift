@@ -1,8 +1,10 @@
 import SwiftUI
+import AppKit
 import PianobarCore
 
 @main
 struct PianobarGUIApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var bootstrap = AppBootstrap()
 
     init() {
@@ -22,9 +24,23 @@ struct PianobarGUIApp: App {
                     ProgressView("Starting…").padding()
                 }
             }
-            .task { await bootstrap.start() }
+            .task {
+                appDelegate.attach(bootstrap: bootstrap)
+                await bootstrap.start()
+            }
             .frame(minWidth: 680, minHeight: 420)
         }
         .windowResizability(.contentMinSize)
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var menuBar: MenuBarController?
+
+    @MainActor
+    func attach(bootstrap: AppBootstrap) {
+        if menuBar == nil {
+            menuBar = MenuBarController(bootstrap: bootstrap)
+        }
     }
 }

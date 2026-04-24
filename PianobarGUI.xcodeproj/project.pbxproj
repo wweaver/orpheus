@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0C943CC5A00CBFEDAB8F256D /* AppBootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12322653DF30954F37F01AF /* AppBootstrap.swift */; };
 		2B54E61E07F5174385F4A133 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCBC3E6F9EB0BCB3B76588B8 /* ErrorBanner.swift */; };
+		3DD5EF002C2D72A70C639C05 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 665F1F12DDA3592FE9BF913D /* MenuBarController.swift */; };
 		4E48D98913AF399C22FC6164 /* PianobarCore in Frameworks */ = {isa = PBXBuildFile; productRef = 150E4869B0E0764AD2D55501 /* PianobarCore */; };
 		56B71C28564382892C6625CC /* NotificationPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D60D0DE7DD8F552AFC71D4F1 /* NotificationPresenter.swift */; };
 		A0AA32140B4EE7C02AC47234 /* MainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CAC15D89B673192722274EC /* MainWindowView.swift */; };
@@ -24,6 +25,7 @@
 		1BC5936206EFA2AD9926CC64 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
 		42A133FADB073A0E23B2FEDE /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		55E5367FD41FCDDF946E82B0 /* Prefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Prefs.swift; sourceTree = "<group>"; };
+		665F1F12DDA3592FE9BF913D /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		7E61C01A9FD4B908B4910C6D /* NowPlayingBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingBridge.swift; sourceTree = "<group>"; };
 		9CAC15D89B673192722274EC /* MainWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowView.swift; sourceTree = "<group>"; };
 		B2210E62872345F44D14C42F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -59,6 +61,7 @@
 		5F1F9DCC9A37C23D6B265813 /* System */ = {
 			isa = PBXGroup;
 			children = (
+				665F1F12DDA3592FE9BF913D /* MenuBarController.swift */,
 				D60D0DE7DD8F552AFC71D4F1 /* NotificationPresenter.swift */,
 				7E61C01A9FD4B908B4910C6D /* NowPlayingBridge.swift */,
 			);
@@ -175,6 +178,7 @@
 				2B54E61E07F5174385F4A133 /* ErrorBanner.swift in Sources */,
 				D6FDBE89C173B604A693917F /* LoginView.swift in Sources */,
 				A0AA32140B4EE7C02AC47234 /* MainWindowView.swift in Sources */,
+				3DD5EF002C2D72A70C639C05 /* MenuBarController.swift in Sources */,
 				56B71C28564382892C6625CC /* NotificationPresenter.swift in Sources */,
 				D70DF8A974C65F39212755DB /* NowPlayingBridge.swift in Sources */,
 				F0D1D777ABDAEF27887D3867 /* NowPlayingView.swift in Sources */,
