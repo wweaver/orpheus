@@ -2,10 +2,27 @@ import SwiftUI
 import AppKit
 import PianobarCore
 
+// MARK: - Label (title in the system menu bar)
+
 /// Title rendered next to the system menu bar icon. Reflects the current song
 /// (formatted per Prefs) or "♪" when nothing is playing.
 struct MenuBarLabel: View {
     @EnvironmentObject var bootstrap: AppBootstrap
+
+    var body: some View {
+        // Nested ObservableObject pattern: when bootstrap.playbackState changes,
+        // the outer view re-renders; the inner view observes the PlaybackState
+        // directly so published-property changes on it trigger re-renders too.
+        if let state = bootstrap.playbackState {
+            MenuBarTitle(state: state)
+        } else {
+            Text("♪")
+        }
+    }
+}
+
+private struct MenuBarTitle: View {
+    @ObservedObject var state: PlaybackState
     @AppStorage(Prefs.Keys.menuBarShowArtist) private var showArtist: Bool = true
     @AppStorage(Prefs.Keys.menuBarShowTitle)  private var showTitle: Bool = true
     @AppStorage(Prefs.Keys.menuBarMaxWidth)   private var maxWidth: Int = 40
@@ -15,7 +32,7 @@ struct MenuBarLabel: View {
     }
 
     private var title: String {
-        guard let song = bootstrap.playbackState?.currentSong else { return "♪" }
+        guard let song = state.currentSong else { return "♪" }
         var parts: [String] = []
         if showArtist { parts.append(song.artist) }
         if showTitle  { parts.append(song.title) }
@@ -28,6 +45,8 @@ struct MenuBarLabel: View {
     }
 }
 
+// MARK: - Dropdown content
+
 /// Dropdown content for the menu bar item: transport controls, stations
 /// submenu, show-app / quit.
 struct MenuBarContent: View {
@@ -36,18 +55,23 @@ struct MenuBarContent: View {
 
     var body: some View {
         if let state = bootstrap.playbackState, let ctrl = bootstrap.ctrl {
-            content(state: state, ctrl: ctrl)
+            MenuBarCommands(state: state, ctrl: ctrl, openWindow: openWindow)
         } else {
             Button("Starting…") {}.disabled(true)
             Divider()
-            Button("Show PianobarGUI") { showMainWindow() }
+            Button("Show PianobarGUI") { MenuBarActions.showMainWindow(openWindow: openWindow) }
             Button("Quit PianobarGUI") { NSApp.terminate(nil) }
                 .keyboardShortcut("q")
         }
     }
+}
 
-    @ViewBuilder
-    private func content(state: PlaybackState, ctrl: PianobarCtrl) -> some View {
+private struct MenuBarCommands: View {
+    @ObservedObject var state: PlaybackState
+    let ctrl: PianobarCtrl
+    let openWindow: OpenWindowAction
+
+    var body: some View {
         Button(state.isPlaying ? "Pause" : "Play") {
             Task { try? await ctrl.togglePlay(); state.setPlaying(!state.isPlaying) }
         }
@@ -90,14 +114,18 @@ struct MenuBarContent: View {
 
         Divider()
 
-        Button("Show PianobarGUI") { showMainWindow() }
-        Button("Preferences…") { openSettings() }
+        Button("Show PianobarGUI") { MenuBarActions.showMainWindow(openWindow: openWindow) }
+        Button("Preferences…") { MenuBarActions.openSettings() }
             .keyboardShortcut(",")
         Button("Quit PianobarGUI") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
     }
+}
 
-    private func showMainWindow() {
+// MARK: - Actions
+
+enum MenuBarActions {
+    static func showMainWindow(openWindow: OpenWindowAction) {
         NSApp.activate(ignoringOtherApps: true)
         if let existing = NSApp.windows.first(where: { isMainAppWindow($0) }) {
             existing.makeKeyAndOrderFront(nil)
@@ -106,13 +134,12 @@ struct MenuBarContent: View {
         }
     }
 
-    private func openSettings() {
+    static func openSettings() {
         NSApp.activate(ignoringOtherApps: true)
         NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
 
-    private func isMainAppWindow(_ window: NSWindow) -> Bool {
-        // Exclude SwiftUI's Settings window and any non-restorable helper windows.
+    private static func isMainAppWindow(_ window: NSWindow) -> Bool {
         let cls = String(describing: type(of: window))
         if cls.contains("Settings") { return false }
         return window.canBecomeKey && window.contentViewController != nil

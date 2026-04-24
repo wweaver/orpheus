@@ -6,6 +6,7 @@ struct StationsSidebarView: View {
     let ctrl: PianobarCtrl
     @State private var filter: String = ""
     @State private var selection: String?
+    @State private var programmaticSelection: Bool = false
     @AppStorage(Prefs.Keys.stationClickCount) private var clickCount: Int = 2
 
     var filtered: [Station] {
@@ -16,20 +17,44 @@ struct StationsSidebarView: View {
     }
 
     var body: some View {
-        List(selection: $selection) {
-            ForEach(filtered) { station in
-                row(for: station)
-                    .tag(station.id)
-                    .contentShape(Rectangle())
-                    .onTapGesture(count: max(1, clickCount)) {
-                        switchTo(station)
-                    }
+        VStack(spacing: 0) {
+            TextField("Filter", text: $filter)
+                .textFieldStyle(.roundedBorder)
+                .padding(.horizontal, 10)
+                .padding(.top, 32)
+                .padding(.bottom, 6)
+
+            List(selection: $selection) {
+                ForEach(filtered) { station in
+                    row(for: station)
+                        .tag(station.id)
+                        .simultaneousGesture(
+                            TapGesture(count: 2).onEnded {
+                                if clickCount == 2 { switchTo(station) }
+                            }
+                        )
+                }
             }
+            .listStyle(.sidebar)
         }
-        .listStyle(.sidebar)
-        .searchable(text: $filter, placement: .sidebar, prompt: "Filter")
         .frame(minWidth: 200)
+        .onChange(of: selection) { newID in
+            // Ignore selections that came from state (programmatic) or no change.
+            guard !programmaticSelection else {
+                programmaticSelection = false
+                return
+            }
+            guard clickCount == 1,
+                  let id = newID,
+                  id != state.currentStation?.id,
+                  let station = state.stations.first(where: { $0.id == id })
+            else { return }
+            switchTo(station)
+        }
         .onChange(of: state.currentStation?.id) { newID in
+            // Reflect playback state into visual selection without triggering
+            // the user-click branch above.
+            programmaticSelection = true
             selection = newID
         }
     }
