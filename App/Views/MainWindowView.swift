@@ -9,13 +9,15 @@ struct MainWindowView: View {
         VStack(spacing: 0) {
             if let msg = state.errorBanner {
                 ErrorBanner(message: msg, onRetry: nil,
-                            onDismiss: { /* Plan 2: add dismiss on state */ })
+                            onDismiss: { state.dismissErrorBanner() })
             }
             NavigationSplitView {
                 StationsSidebarView(state: state, ctrl: ctrl)
             } detail: {
                 NowPlayingView(state: state, ctrl: ctrl)
             }
+            Divider()
+            HistoryView(state: state, ctrl: ctrl)
         }
     }
 }

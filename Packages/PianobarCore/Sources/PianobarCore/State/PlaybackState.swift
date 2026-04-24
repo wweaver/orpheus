@@ -73,6 +73,10 @@ public final class PlaybackState: ObservableObject {
 
     public func setPlaying(_ playing: Bool) { isPlaying = playing }
 
+    public func dismissErrorBanner() {
+        errorBanner = nil
+    }
+
     private func startTicker() {
         ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor in

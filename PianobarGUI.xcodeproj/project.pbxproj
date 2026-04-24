@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		07AAAA4C4F9E0E3B9AEAB0E6 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBC19A543E459CFE9C8F7BEA /* HistoryView.swift */; };
 		0C943CC5A00CBFEDAB8F256D /* AppBootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12322653DF30954F37F01AF /* AppBootstrap.swift */; };
 		2B54E61E07F5174385F4A133 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCBC3E6F9EB0BCB3B76588B8 /* ErrorBanner.swift */; };
 		3DD5EF002C2D72A70C639C05 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 665F1F12DDA3592FE9BF913D /* MenuBarController.swift */; };
@@ -36,6 +37,7 @@
 		E76EFE33F3068B7D1E59808D /* PianobarCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PianobarCore; path = Packages/PianobarCore; sourceTree = SOURCE_ROOT; };
 		E86A9EEEF6B2F335456AAA1A /* StationsSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationsSidebarView.swift; sourceTree = "<group>"; };
 		EDC626EDA1076A67F46E8683 /* PianobarGUI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PianobarGUI.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FBC19A543E459CFE9C8F7BEA /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -102,6 +104,7 @@
 			isa = PBXGroup;
 			children = (
 				DCBC3E6F9EB0BCB3B76588B8 /* ErrorBanner.swift */,
+				FBC19A543E459CFE9C8F7BEA /* HistoryView.swift */,
 				42A133FADB073A0E23B2FEDE /* LoginView.swift */,
 				9CAC15D89B673192722274EC /* MainWindowView.swift */,
 				1BC5936206EFA2AD9926CC64 /* NowPlayingView.swift */,
@@ -176,6 +179,7 @@
 			files = (
 				0C943CC5A00CBFEDAB8F256D /* AppBootstrap.swift in Sources */,
 				2B54E61E07F5174385F4A133 /* ErrorBanner.swift in Sources */,
+				07AAAA4C4F9E0E3B9AEAB0E6 /* HistoryView.swift in Sources */,
 				D6FDBE89C173B604A693917F /* LoginView.swift in Sources */,
 				A0AA32140B4EE7C02AC47234 /* MainWindowView.swift in Sources */,
 				3DD5EF002C2D72A70C639C05 /* MenuBarController.swift in Sources */,
