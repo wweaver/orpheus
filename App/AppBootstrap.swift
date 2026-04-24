@@ -37,6 +37,22 @@ final class AppBootstrap: ObservableObject {
         Task { await launch(email: email, password: password) }
     }
 
+    func signOut() {
+        keychain.delete()
+        Task {
+            try? await process?.stop()
+            await bridge?.stop()
+            playbackState = nil
+            ctrl = nil
+            bridge = nil
+            process = nil
+            nowPlayingBridge = nil
+            notificationPresenter = nil
+            globalHotkeys = nil
+            needsLogin = true
+        }
+    }
+
     private func launch(email: String, password: String) async {
         try? FileManager.default.createDirectory(at: appSupportDir, withIntermediateDirectories: true)
         try? FileManager.default.createDirectory(at: configDir, withIntermediateDirectories: true)

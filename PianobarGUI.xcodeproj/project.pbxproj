@@ -15,6 +15,7 @@
 		56B71C28564382892C6625CC /* NotificationPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D60D0DE7DD8F552AFC71D4F1 /* NotificationPresenter.swift */; };
 		5B38113740DE745403CDEAAC /* GlobalHotkeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48F5113C2E33A46619F61AB0 /* GlobalHotkeys.swift */; };
 		A0AA32140B4EE7C02AC47234 /* MainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CAC15D89B673192722274EC /* MainWindowView.swift */; };
+		BDEA039AC61C621EB3FCDD71 /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F131B6A830377123C387B091 /* PreferencesView.swift */; };
 		D6FDBE89C173B604A693917F /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42A133FADB073A0E23B2FEDE /* LoginView.swift */; };
 		D70DF8A974C65F39212755DB /* NowPlayingBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E61C01A9FD4B908B4910C6D /* NowPlayingBridge.swift */; };
 		E145C93EA899C688EB5E985A /* PianobarGUIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC907284417A2ED90AE92C82 /* PianobarGUIApp.swift */; };
@@ -39,6 +40,7 @@
 		E76EFE33F3068B7D1E59808D /* PianobarCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PianobarCore; path = Packages/PianobarCore; sourceTree = SOURCE_ROOT; };
 		E86A9EEEF6B2F335456AAA1A /* StationsSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationsSidebarView.swift; sourceTree = "<group>"; };
 		EDC626EDA1076A67F46E8683 /* PianobarGUI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PianobarGUI.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F131B6A830377123C387B091 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
 		FBC19A543E459CFE9C8F7BEA /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -111,6 +113,7 @@
 				42A133FADB073A0E23B2FEDE /* LoginView.swift */,
 				9CAC15D89B673192722274EC /* MainWindowView.swift */,
 				1BC5936206EFA2AD9926CC64 /* NowPlayingView.swift */,
+				F131B6A830377123C387B091 /* PreferencesView.swift */,
 				E86A9EEEF6B2F335456AAA1A /* StationsSidebarView.swift */,
 			);
 			path = Views;
@@ -191,6 +194,7 @@
 				D70DF8A974C65F39212755DB /* NowPlayingBridge.swift in Sources */,
 				F0D1D777ABDAEF27887D3867 /* NowPlayingView.swift in Sources */,
 				E145C93EA899C688EB5E985A /* PianobarGUIApp.swift in Sources */,
+				BDEA039AC61C621EB3FCDD71 /* PreferencesView.swift in Sources */,
 				F40435B8A65FFE21EF7A36A1 /* Prefs.swift in Sources */,
 				F4E702972F0693C68B0B6784 /* StationsSidebarView.swift in Sources */,
 			);
