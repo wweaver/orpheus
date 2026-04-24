@@ -11,6 +11,7 @@
 		4E48D98913AF399C22FC6164 /* PianobarCore in Frameworks */ = {isa = PBXBuildFile; productRef = 150E4869B0E0764AD2D55501 /* PianobarCore */; };
 		D6FDBE89C173B604A693917F /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42A133FADB073A0E23B2FEDE /* LoginView.swift */; };
 		E145C93EA899C688EB5E985A /* PianobarGUIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC907284417A2ED90AE92C82 /* PianobarGUIApp.swift */; };
+		F4E702972F0693C68B0B6784 /* StationsSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E86A9EEEF6B2F335456AAA1A /* StationsSidebarView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -19,6 +20,7 @@
 		C12322653DF30954F37F01AF /* AppBootstrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBootstrap.swift; sourceTree = "<group>"; };
 		DC907284417A2ED90AE92C82 /* PianobarGUIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PianobarGUIApp.swift; sourceTree = "<group>"; };
 		E76EFE33F3068B7D1E59808D /* PianobarCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PianobarCore; path = Packages/PianobarCore; sourceTree = SOURCE_ROOT; };
+		E86A9EEEF6B2F335456AAA1A /* StationsSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationsSidebarView.swift; sourceTree = "<group>"; };
 		EDC626EDA1076A67F46E8683 /* PianobarGUI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PianobarGUI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -74,6 +76,7 @@
 			isa = PBXGroup;
 			children = (
 				42A133FADB073A0E23B2FEDE /* LoginView.swift */,
+				E86A9EEEF6B2F335456AAA1A /* StationsSidebarView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -145,6 +148,7 @@
 				0C943CC5A00CBFEDAB8F256D /* AppBootstrap.swift in Sources */,
 				D6FDBE89C173B604A693917F /* LoginView.swift in Sources */,
 				E145C93EA899C688EB5E985A /* PianobarGUIApp.swift in Sources */,
+				F4E702972F0693C68B0B6784 /* StationsSidebarView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
