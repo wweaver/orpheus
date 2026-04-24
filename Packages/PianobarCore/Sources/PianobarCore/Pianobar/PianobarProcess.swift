@@ -9,6 +9,7 @@ public actor PianobarProcess {
     private let xdgConfigHome: String
     private let eventSocketPath: String
     private let logFileURL: URL?
+    private let eventDebugLogURL: URL?
     private let supervisorBackoff: [TimeInterval]
     private var process: Process?
     private(set) var state: State = .stopped
@@ -23,11 +24,13 @@ public actor PianobarProcess {
                 xdgConfigHome: String,
                 eventSocketPath: String,
                 logFileURL: URL? = nil,
+                eventDebugLogURL: URL? = nil,
                 supervisorBackoff: [TimeInterval] = [1, 2, 4, 8, 16, 30]) {
         self.executablePath = executablePath
         self.xdgConfigHome = xdgConfigHome
         self.eventSocketPath = eventSocketPath
         self.logFileURL = logFileURL
+        self.eventDebugLogURL = eventDebugLogURL
         self.supervisorBackoff = supervisorBackoff
 
         var cont: AsyncStream<Void>.Continuation!
@@ -75,12 +78,18 @@ public actor PianobarProcess {
     private func spawn() throws {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: executablePath)
-        p.environment = [
+        var env: [String: String] = [
             "HOME": NSHomeDirectory(),
             "PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin",
             "XDG_CONFIG_HOME": xdgConfigHome,
             "PIANOBAR_GUI_SOCK": eventSocketPath,
         ]
+        if let url = eventDebugLogURL {
+            try? FileManager.default.createDirectory(
+                at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            env["PIANOBAR_GUI_EVENT_LOG"] = url.path
+        }
+        p.environment = env
         p.standardInput = FileHandle(forReadingAtPath: "/dev/null")
         let logHandle: FileHandle
         if let url = logFileURL {

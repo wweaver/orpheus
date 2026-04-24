@@ -14,20 +14,25 @@ public struct ConfigManager {
         password: String,
         audioQuality: AudioQuality,
         eventBridgePath: String,
-        fifoPath: String
+        fifoPath: String,
+        autostartStationId: String? = nil
     ) throws {
         try FileManager.default.createDirectory(
             at: configDir, withIntermediateDirectories: true,
             attributes: [.posixPermissions: 0o700])
 
-        let body = """
-        user = \(email)
-        password = \(password)
-        audio_quality = \(audioQuality.rawValue)
-        autoselect = 1
-        event_command = \(eventBridgePath)
-        fifo = \(fifoPath)
-        """
+        var lines = [
+            "user = \(email)",
+            "password = \(password)",
+            "audio_quality = \(audioQuality.rawValue)",
+            "autoselect = 1",
+            "event_command = \(eventBridgePath)",
+            "fifo = \(fifoPath)",
+        ]
+        if let id = autostartStationId, !id.isEmpty {
+            lines.append("autostart_station = \(id)")
+        }
+        let body = lines.joined(separator: "\n")
 
         let configFile = configDir.appendingPathComponent("config")
         try body.write(to: configFile, atomically: true, encoding: .utf8)

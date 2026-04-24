@@ -15,6 +15,7 @@ final class AppBootstrap: ObservableObject {
     private var notificationPresenter: NotificationPresenter?
     private var globalHotkeys: GlobalHotkeys?
     private var supervisorWatch: Task<Void, Never>?
+    private var stationTracker: Task<Void, Never>?
 
     private var appSupportDir: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -40,6 +41,9 @@ final class AppBootstrap: ObservableObject {
 
     func signOut() {
         keychain.delete()
+        UserDefaults.standard.removeObject(forKey: Prefs.Keys.lastStationId)
+        stationTracker?.cancel()
+        stationTracker = nil
         Task {
             try? await process?.stop()
             await bridge?.stop()
@@ -63,10 +67,21 @@ final class AppBootstrap: ObservableObject {
 
         let eventBridgePath = PianobarCoreResources.eventBridgeScriptURL.path
 
-        // Write config
+        // Write config. If the user asked to resume their last station, tell
+        // pianobar via `autostart_station` so it skips the "Select station" prompt.
+        let autostartId: String? = {
+            guard UserDefaults.standard.bool(forKey: Prefs.Keys.autostartLastStation)
+            else { return nil }
+            let id = UserDefaults.standard.string(forKey: Prefs.Keys.lastStationId)
+            return (id?.isEmpty == false) ? id : nil
+        }()
+        let audioQuality = ConfigManager.AudioQuality(
+            rawValue: UserDefaults.standard.string(forKey: Prefs.Keys.audioQuality) ?? "high"
+        ) ?? .high
         try? ConfigManager(configDir: configDir).writeConfig(
-            email: email, password: password, audioQuality: .high,
-            eventBridgePath: eventBridgePath, fifoPath: fifoPath)
+            email: email, password: password, audioQuality: audioQuality,
+            eventBridgePath: eventBridgePath, fifoPath: fifoPath,
+            autostartStationId: autostartId)
 
         // Make FIFO
         unlink(fifoPath)
@@ -82,13 +97,18 @@ final class AppBootstrap: ObservableObject {
         playbackState = state
 
         // Start pianobar
-        let logURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Logs/PianobarGUI/pianobar.log")
+        let logsDir = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Logs/PianobarGUI")
+        let logURL = logsDir.appendingPathComponent("pianobar.log")
+        let eventLogURL: URL? = UserDefaults.standard.bool(forKey: Prefs.Keys.eventDebugLog)
+            ? logsDir.appendingPathComponent("events.log")
+            : nil
         let proc = PianobarProcess(
             executablePath: pianobarPath,
             xdgConfigHome: appSupportDir.path,
             eventSocketPath: socketPath,
-            logFileURL: logURL
+            logFileURL: logURL,
+            eventDebugLogURL: eventLogURL
         )
         try? await proc.start()
         process = proc
@@ -101,6 +121,22 @@ final class AppBootstrap: ObservableObject {
             nowPlayingBridge = NowPlayingBridge(state: state, ctrl: ctrl)
             notificationPresenter = NotificationPresenter(state: state, ctrl: ctrl)
             globalHotkeys = GlobalHotkeys(state: state, ctrl: ctrl)
+            trackCurrentStation(state)
+        }
+    }
+
+    private func trackCurrentStation(_ state: PlaybackState) {
+        stationTracker?.cancel()
+        stationTracker = Task { @MainActor [weak state] in
+            var lastSaved: String?
+            while !Task.isCancelled {
+                let id = state?.currentStation?.id
+                if let id, id != lastSaved {
+                    UserDefaults.standard.set(id, forKey: Prefs.Keys.lastStationId)
+                    lastSaved = id
+                }
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+            }
         }
     }
 

@@ -8,6 +8,9 @@ struct PreferencesView: View {
     @AppStorage(Prefs.Keys.menuBarShowArtist) var menuBarShowArtist: Bool = true
     @AppStorage(Prefs.Keys.menuBarShowTitle)  var menuBarShowTitle: Bool = true
     @AppStorage(Prefs.Keys.menuBarMaxWidth)   var menuBarMaxWidth: Int = 40
+    @AppStorage(Prefs.Keys.autostartLastStation) var autostartLastStation: Bool = true
+    @AppStorage(Prefs.Keys.stationClickCount) var stationClickCount: Int = 2
+    @AppStorage(Prefs.Keys.eventDebugLog)     var eventDebugLog: Bool = false
 
     var body: some View {
         TabView {
@@ -15,9 +18,10 @@ struct PreferencesView: View {
             menuBar.tabItem { Label("Menu Bar", systemImage: "menubar.rectangle") }
             notifications.tabItem { Label("Notifications", systemImage: "bell") }
             hotkeys.tabItem { Label("Hotkeys", systemImage: "keyboard") }
+            advanced.tabItem { Label("Advanced", systemImage: "ladybug") }
             account.tabItem { Label("Account", systemImage: "person.crop.circle") }
         }
-        .frame(width: 460, height: 300)
+        .frame(width: 460, height: 320)
         .padding(20)
     }
 
@@ -28,6 +32,12 @@ struct PreferencesView: View {
                 Text("Medium").tag("medium")
                 Text("High").tag("high")
             }
+            Toggle("Resume last station on launch", isOn: $autostartLastStation)
+            Picker("Station click to switch", selection: $stationClickCount) {
+                Text("Single-click").tag(1)
+                Text("Double-click").tag(2)
+            }
+            .pickerStyle(.segmented)
         }
     }
 
@@ -52,6 +62,17 @@ struct PreferencesView: View {
             Text("Hotkey configuration coming soon. To set a hotkey manually, "
                  + "write `<keyCode>,<modifierMask>` to the `hotkey.<action>` "
                  + "UserDefaults key.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var advanced: some View {
+        Form {
+            Toggle("Log pianobar event payloads", isOn: $eventDebugLog)
+            Text("Writes every event payload (including coverArt) to "
+                 + "~/Library/Logs/PianobarGUI/events.log. Restart the app "
+                 + "after toggling. Leave off in normal use.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

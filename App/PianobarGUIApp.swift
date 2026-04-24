@@ -12,39 +12,52 @@ struct PianobarGUIApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("PianobarGUI") {
-            Group {
-                if bootstrap.needsLogin {
-                    LoginView(onSubmit: { email, password in
-                        bootstrap.saveCredentials(email: email, password: password)
-                    })
-                } else if let state = bootstrap.playbackState, let ctrl = bootstrap.ctrl {
-                    MainWindowView(state: state, ctrl: ctrl)
-                } else {
-                    ProgressView("Starting…").padding()
-                }
-            }
-            .task {
-                appDelegate.attach(bootstrap: bootstrap)
-                await bootstrap.start()
-            }
-            .frame(minWidth: 680, minHeight: 420)
+        WindowGroup("PianobarGUI", id: "main") {
+            RootView()
+                .environmentObject(bootstrap)
+                .task { await bootstrap.start() }
+                .frame(minWidth: 680, minHeight: 420)
         }
         .windowResizability(.contentMinSize)
 
         Settings {
             PreferencesView().environmentObject(bootstrap)
         }
+
+        MenuBarExtra {
+            MenuBarContent()
+                .environmentObject(bootstrap)
+        } label: {
+            MenuBarLabel()
+                .environmentObject(bootstrap)
+        }
+        .menuBarExtraStyle(.menu)
+    }
+}
+
+/// Small wrapper so SwiftUI can re-create the main window content when the
+/// WindowGroup opens a fresh instance. Keeps bootstrap-driven branching here.
+struct RootView: View {
+    @EnvironmentObject var bootstrap: AppBootstrap
+
+    var body: some View {
+        Group {
+            if bootstrap.needsLogin {
+                LoginView(onSubmit: { email, password in
+                    bootstrap.saveCredentials(email: email, password: password)
+                })
+            } else if let state = bootstrap.playbackState, let ctrl = bootstrap.ctrl {
+                MainWindowView(state: state, ctrl: ctrl)
+            } else {
+                ProgressView("Starting…").padding()
+            }
+        }
     }
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private var menuBar: MenuBarController?
-
-    @MainActor
-    func attach(bootstrap: AppBootstrap) {
-        if menuBar == nil {
-            menuBar = MenuBarController(bootstrap: bootstrap)
-        }
+    /// Keep the app alive when the last window is closed so the menu bar stays put.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
     }
 }

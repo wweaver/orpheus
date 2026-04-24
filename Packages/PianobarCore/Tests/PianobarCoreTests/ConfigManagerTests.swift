@@ -50,4 +50,24 @@ final class ConfigManagerTests: XCTestCase {
                             eventBridgePath: "/tmp/x", fifoPath: "/tmp/y")
         XCTAssertTrue(FileManager.default.fileExists(atPath: nested.appendingPathComponent("config").path))
     }
+
+    func testAutostartStationIncludedWhenProvided() throws {
+        let mgr = ConfigManager(configDir: tmp)
+        try mgr.writeConfig(email: "a@b.com", password: "p",
+                            audioQuality: .high,
+                            eventBridgePath: "/tmp/x", fifoPath: "/tmp/y",
+                            autostartStationId: "4242")
+        let contents = try String(contentsOf: tmp.appendingPathComponent("config"))
+        XCTAssertTrue(contents.contains("autostart_station = 4242"))
+    }
+
+    func testAutostartStationOmittedWhenNil() throws {
+        let mgr = ConfigManager(configDir: tmp)
+        try mgr.writeConfig(email: "a@b.com", password: "p",
+                            audioQuality: .high,
+                            eventBridgePath: "/tmp/x", fifoPath: "/tmp/y",
+                            autostartStationId: nil)
+        let contents = try String(contentsOf: tmp.appendingPathComponent("config"))
+        XCTAssertFalse(contents.contains("autostart_station"))
+    }
 }
