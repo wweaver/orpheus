@@ -11,10 +11,12 @@
 		4E48D98913AF399C22FC6164 /* PianobarCore in Frameworks */ = {isa = PBXBuildFile; productRef = 150E4869B0E0764AD2D55501 /* PianobarCore */; };
 		D6FDBE89C173B604A693917F /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42A133FADB073A0E23B2FEDE /* LoginView.swift */; };
 		E145C93EA899C688EB5E985A /* PianobarGUIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC907284417A2ED90AE92C82 /* PianobarGUIApp.swift */; };
+		F0D1D777ABDAEF27887D3867 /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BC5936206EFA2AD9926CC64 /* NowPlayingView.swift */; };
 		F4E702972F0693C68B0B6784 /* StationsSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E86A9EEEF6B2F335456AAA1A /* StationsSidebarView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		1BC5936206EFA2AD9926CC64 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
 		42A133FADB073A0E23B2FEDE /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		B2210E62872345F44D14C42F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C12322653DF30954F37F01AF /* AppBootstrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBootstrap.swift; sourceTree = "<group>"; };
@@ -76,6 +78,7 @@
 			isa = PBXGroup;
 			children = (
 				42A133FADB073A0E23B2FEDE /* LoginView.swift */,
+				1BC5936206EFA2AD9926CC64 /* NowPlayingView.swift */,
 				E86A9EEEF6B2F335456AAA1A /* StationsSidebarView.swift */,
 			);
 			path = Views;
@@ -147,6 +150,7 @@
 			files = (
 				0C943CC5A00CBFEDAB8F256D /* AppBootstrap.swift in Sources */,
 				D6FDBE89C173B604A693917F /* LoginView.swift in Sources */,
+				F0D1D777ABDAEF27887D3867 /* NowPlayingView.swift in Sources */,
 				E145C93EA899C688EB5E985A /* PianobarGUIApp.swift in Sources */,
 				F4E702972F0693C68B0B6784 /* StationsSidebarView.swift in Sources */,
 			);
