@@ -56,13 +56,25 @@ public enum EventParser {
             title: title,
             artist: artist,
             album: kv["album"] ?? "",
-            coverArtURL: kv["coverArt"].flatMap(URL.init),
+            coverArtURL: kv["coverArt"].flatMap(httpsURL),
             durationSeconds: kv["songDuration"].flatMap(Int.init) ?? 0,
             rating: Rating(pianobarInt: kv["rating"].flatMap(Int.init) ?? 0),
             detailURL: kv["detailUrl"].flatMap(URL.init),
             stationName: kv["stationName"] ?? ""
         )
         return .songStart(song)
+    }
+
+    /// Pianobar emits Pandora CDN URLs as `http://`, which modern macOS
+    /// App Transport Security refuses to load. Pandora's CDN serves the
+    /// same content over HTTPS, so rewrite the scheme before handing the
+    /// URL to `AsyncImage` or `MPMediaItemArtwork`.
+    private static func httpsURL(from string: String) -> URL? {
+        guard !string.isEmpty else { return nil }
+        let upgraded = string.hasPrefix("http://")
+            ? "https://" + string.dropFirst("http://".count)
+            : string
+        return URL(string: upgraded)
     }
 
     private static func stations(from kv: [String: String]) -> [Station] {

@@ -71,4 +71,37 @@ final class EventParserTests: XCTestCase {
         // but must not crash
         _ = event
     }
+
+    func testUpgradesHttpCoverArtToHttps() {
+        let payload = """
+        artist=X
+        title=Y
+        album=Z
+        coverArt=http://mediaserver-cont-dc6-1-v4v6.pandora.com/images/abc/1080W_1080H.jpg
+        stationName=Test
+        pRet=1
+        wRet=0
+        """
+        guard case .songStart(let song) =
+                EventParser.parse(eventType: "songstart", payload: payload)
+        else { return XCTFail() }
+        XCTAssertEqual(song.coverArtURL?.scheme, "https")
+        XCTAssertEqual(song.coverArtURL?.host,
+                       "mediaserver-cont-dc6-1-v4v6.pandora.com")
+    }
+
+    func testLeavesHttpsCoverArtUnchanged() {
+        let payload = """
+        artist=X
+        title=Y
+        coverArt=https://already-secure.example.com/a.jpg
+        pRet=1
+        wRet=0
+        """
+        guard case .songStart(let song) =
+                EventParser.parse(eventType: "songstart", payload: payload)
+        else { return XCTFail() }
+        XCTAssertEqual(song.coverArtURL?.absoluteString,
+                       "https://already-secure.example.com/a.jpg")
+    }
 }
