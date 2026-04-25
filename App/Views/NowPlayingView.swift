@@ -4,22 +4,16 @@ import PianobarCore
 struct NowPlayingView: View {
     @ObservedObject var state: PlaybackState
     let ctrl: PianobarCtrl
+    var windowSize: CGSize = .zero
+
+    private var showArt: Bool {
+        windowSize.height >= 510
+    }
+    private var showHeader: Bool {
+        windowSize.height >= 260
+    }
 
     var body: some View {
-        GeometryReader { geo in
-            playerContent(showArt: shouldShowArt(in: geo.size))
-        }
-    }
-
-    private func shouldShowArt(in size: CGSize) -> Bool {
-        // Drop the album art when the player pane is short enough that
-        // showing both art and controls would crowd the time labels off
-        // the bottom edge.
-        size.height >= 360 && size.width >= 260
-    }
-
-    @ViewBuilder
-    private func playerContent(showArt: Bool) -> some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 12) {
                 if showArt {
@@ -28,16 +22,18 @@ struct NowPlayingView: View {
                         .frame(maxWidth: 240)
                 }
 
-                if let song = state.currentSong {
-                    Text(song.title).font(.headline).bold()
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
-                    Text(song.artist).font(.subheadline).foregroundStyle(.secondary)
-                        .lineLimit(1)
-                    Text(song.album).font(.caption).foregroundStyle(.tertiary)
-                        .lineLimit(1)
-                } else {
-                    Text("Not playing").foregroundStyle(.secondary)
+                if showHeader {
+                    if let song = state.currentSong {
+                        Text(song.title).font(.headline).bold()
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                        Text(song.artist).font(.subheadline).foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        Text(song.album).font(.caption).foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                    } else {
+                        Text("Not playing").foregroundStyle(.secondary)
+                    }
                 }
 
                 HStack(spacing: 8) {
@@ -58,8 +54,8 @@ struct NowPlayingView: View {
                 progressBar
             }
             .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 24)
+            .padding(.top, 12)
+            .padding(.bottom, 16)
             .frame(maxWidth: .infinity)
         }
     }

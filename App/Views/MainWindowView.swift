@@ -6,6 +6,7 @@ struct MainWindowView: View {
     let ctrl: PianobarCtrl
 
     @State private var visibility: NavigationSplitViewVisibility = .all
+    @State private var windowSize: CGSize = .zero
     /// User's last explicit choice. nil = follow auto-collapse rule, true = stay
     /// hidden, false = stay visible.
     @AppStorage("sidebarUserOverride") private var userOverrideRaw: String = ""
@@ -17,22 +18,23 @@ struct MainWindowView: View {
             NavigationSplitView(columnVisibility: $visibility) {
                 StationsSidebarView(state: state, ctrl: ctrl)
             } detail: {
-                NowPlayingView(state: state, ctrl: ctrl)
+                NowPlayingView(state: state, ctrl: ctrl, windowSize: windowSize)
             }
-            .onChange(of: geo.size.width) { newWidth in
-                applyAutoCollapse(width: newWidth)
+            .onChange(of: geo.size) { newSize in
+                windowSize = newSize
+                applyAutoCollapse(width: newSize.width)
             }
             .onChange(of: visibility) { newValue in
                 rememberManualToggle(width: geo.size.width, newVisibility: newValue)
             }
             .onAppear {
+                windowSize = geo.size
                 applyAutoCollapse(width: geo.size.width)
             }
         }
     }
 
     private func applyAutoCollapse(width: CGFloat) {
-        // If user has an explicit preference, honor it.
         if userOverrideRaw == "hidden" {
             if visibility != .detailOnly { visibility = .detailOnly }
             return
@@ -41,15 +43,12 @@ struct MainWindowView: View {
             if visibility != .all { visibility = .all }
             return
         }
-        // Otherwise auto-toggle by width.
         let target: NavigationSplitViewVisibility =
             width < Self.collapseThreshold ? .detailOnly : .all
         if visibility != target { visibility = target }
     }
 
     private func rememberManualToggle(width: CGFloat, newVisibility: NavigationSplitViewVisibility) {
-        // If the visibility now matches what auto would have chosen for this
-        // width, treat that as "user agrees with auto" — clear the override.
         let autoTarget: NavigationSplitViewVisibility =
             width < Self.collapseThreshold ? .detailOnly : .all
         if newVisibility == autoTarget {
