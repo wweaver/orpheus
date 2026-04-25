@@ -10,7 +10,7 @@ struct NowPlayingView: View {
             VStack(spacing: 12) {
                 albumArt
                     .aspectRatio(1, contentMode: .fit)
-                    .frame(maxWidth: 240, maxHeight: 240)
+                    .frame(maxWidth: 240)
 
                 if let song = state.currentSong {
                     Text(song.title).font(.headline).bold()
@@ -41,7 +41,9 @@ struct NowPlayingView: View {
 
                 progressBar
             }
-            .padding(16)
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 24)
             .frame(maxWidth: .infinity)
         }
     }
