@@ -15,7 +15,7 @@ struct PianobarGUIApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("Orpheus", id: "main") {
+        Window("Orpheus", id: "main") {
             RootView()
                 .environmentObject(bootstrap)
                 .task { await bootstrap.start() }

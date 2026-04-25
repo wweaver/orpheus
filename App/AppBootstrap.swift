@@ -32,6 +32,10 @@ final class AppBootstrap: ObservableObject {
     private var pidFilePath: String { appSupportDir.appendingPathComponent("pianobar.pid").path }
 
     func start() async {
+        // Idempotency: if a previous .task call already started us, don't
+        // do it again. This guards against SwiftUI re-running the modifier
+        // when window state restores or when the view re-attaches.
+        guard playbackState == nil, ctrl == nil else { return }
         guard let creds = keychain.load() else {
             needsLogin = true
             return
