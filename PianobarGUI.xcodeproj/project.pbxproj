@@ -10,6 +10,7 @@
 		07AAAA4C4F9E0E3B9AEAB0E6 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBC19A543E459CFE9C8F7BEA /* HistoryView.swift */; };
 		0C943CC5A00CBFEDAB8F256D /* AppBootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12322653DF30954F37F01AF /* AppBootstrap.swift */; };
 		2B54E61E07F5174385F4A133 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCBC3E6F9EB0BCB3B76588B8 /* ErrorBanner.swift */; };
+		4CF756580F67171E9D5772FB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 94F3B7C1C3C3828388DC53DB /* Assets.xcassets */; };
 		4E48D98913AF399C22FC6164 /* PianobarCore in Frameworks */ = {isa = PBXBuildFile; productRef = 150E4869B0E0764AD2D55501 /* PianobarCore */; };
 		563F4A76E47351576496291A /* SessionSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF6D2FDA80F91D75A970C43 /* SessionSnapshot.swift */; };
 		56B71C28564382892C6625CC /* NotificationPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D60D0DE7DD8F552AFC71D4F1 /* NotificationPresenter.swift */; };
@@ -33,6 +34,7 @@
 		48F5113C2E33A46619F61AB0 /* GlobalHotkeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalHotkeys.swift; sourceTree = "<group>"; };
 		55E5367FD41FCDDF946E82B0 /* Prefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Prefs.swift; sourceTree = "<group>"; };
 		7E61C01A9FD4B908B4910C6D /* NowPlayingBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingBridge.swift; sourceTree = "<group>"; };
+		94F3B7C1C3C3828388DC53DB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9CAC15D89B673192722274EC /* MainWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowView.swift; sourceTree = "<group>"; };
 		B2210E62872345F44D14C42F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C12322653DF30954F37F01AF /* AppBootstrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBootstrap.swift; sourceTree = "<group>"; };
@@ -83,6 +85,7 @@
 			isa = PBXGroup;
 			children = (
 				C12322653DF30954F37F01AF /* AppBootstrap.swift */,
+				94F3B7C1C3C3828388DC53DB /* Assets.xcassets */,
 				B2210E62872345F44D14C42F /* Info.plist */,
 				DC907284417A2ED90AE92C82 /* PianobarGUIApp.swift */,
 				55E5367FD41FCDDF946E82B0 /* Prefs.swift */,
@@ -133,6 +136,7 @@
 			buildConfigurationList = 960FBBE445F693D0F0E03642 /* Build configuration list for PBXNativeTarget "PianobarGUI" */;
 			buildPhases = (
 				0806B093BA14A03309A95026 /* Sources */,
+				E9EB3331FD3BF37A0A9CDBC9 /* Resources */,
 				F27D7FE690545FC80AC60BA9 /* Frameworks */,
 			);
 			buildRules = (
@@ -183,6 +187,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		E9EB3331FD3BF37A0A9CDBC9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4CF756580F67171E9D5772FB /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		0806B093BA14A03309A95026 /* Sources */ = {
