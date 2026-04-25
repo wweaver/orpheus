@@ -15,7 +15,8 @@ enum Prefs {
         static let stationClickCount = "stationClickCount"     // Int (1 or 2)
         static let eventDebugLog     = "eventDebugLog"         // Bool
         static let keepPianobarAlive = "keepPianobarAlive"     // Bool (experimental)
-        static let wasPlayingOnQuit  = "wasPlayingOnQuit"      // Bool (internal)
+        static let wasPlayingOnQuit  = "wasPlayingOnQuit"      // Bool (internal, legacy)
+        static let pianobarWasPaused = "pianobarWasPaused"     // Bool (internal — true only when our willTerminate explicitly paused pianobar)
     }
 
     /// Defaults applied once at first launch if the key is missing.

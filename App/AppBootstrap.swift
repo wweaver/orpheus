@@ -89,6 +89,7 @@ final class AppBootstrap: ObservableObject {
               let state = playbackState
         else {
             SessionStore.clear()
+            UserDefaults.standard.set(false, forKey: Prefs.Keys.pianobarWasPaused)
             return
         }
 
@@ -106,6 +107,13 @@ final class AppBootstrap: ObservableObject {
 
         if state.isPlaying {
             Self.writeFifoSync("p\n", at: fifoPath)
+            // Record that WE explicitly paused pianobar. The next launch
+            // looks at this flag (not the snapshot) to decide whether to
+            // toggle on attach. Without this we don't know if pianobar
+            // is paused — e.g. SIGTERM bypasses willTerminate entirely.
+            UserDefaults.standard.set(true, forKey: Prefs.Keys.pianobarWasPaused)
+        } else {
+            UserDefaults.standard.set(false, forKey: Prefs.Keys.pianobarWasPaused)
         }
     }
 
@@ -143,6 +151,8 @@ final class AppBootstrap: ObservableObject {
         // Either the pref is off, or the pidfile is stale / the process died.
         // Clean up any orphan pidfile so we don't keep thinking it's alive.
         PianobarPidFile.clear(at: pidFilePath)
+        // Fresh pianobar means we definitely don't need to toggle play state.
+        UserDefaults.standard.set(false, forKey: Prefs.Keys.pianobarWasPaused)
 
         // Resolve pianobar path. Dev builds use Homebrew.
         let pianobarPath = resolvePianobarPath() ?? "/opt/homebrew/bin/pianobar"
@@ -226,8 +236,8 @@ final class AppBootstrap: ObservableObject {
         bridge = b
 
         let state = PlaybackState(events: b.events)
-        let snapshot = SessionStore.load()
-        restoreSnapshotIfAny(into: state, advanceProgress: snapshot?.wasPlaying == true)
+        let wasPaused = UserDefaults.standard.bool(forKey: Prefs.Keys.pianobarWasPaused)
+        restoreSnapshotIfAny(into: state, advanceProgress: wasPaused)
         playbackState = state
         startSnapshotPersistence(state)
 
@@ -240,10 +250,16 @@ final class AppBootstrap: ObservableObject {
             notificationPresenter = NotificationPresenter(state: state, ctrl: ctrl)
             globalHotkeys = GlobalHotkeys(state: state, ctrl: ctrl)
             trackCurrentStation(state)
-            // Resume playback if we paused it on the prior quit. Pianobar's
-            // `p` is a toggle, so one press flips paused → playing.
-            if snapshot?.wasPlaying == true {
+            // Only resume if WE paused pianobar in our willTerminate. Other
+            // exits (SIGTERM from killall, force quit, crash) leave pianobar
+            // in whatever state it was in; toggling blindly would silence it.
+            if wasPaused {
                 Task { try? await ctrl.togglePlay(); state.setPlaying(true) }
+                UserDefaults.standard.set(false, forKey: Prefs.Keys.pianobarWasPaused)
+            } else {
+                // Match what's on disk: pianobar kept playing through our
+                // exit, so reflect that in the UI.
+                state.setPlaying(true)
             }
         }
     }
