@@ -4,6 +4,7 @@ import PianobarCore
 struct NowPlayingView: View {
     @ObservedObject var state: PlaybackState
     let ctrl: PianobarCtrl
+    @State private var systemVolume: Double = Double(SystemVolume.read() ?? 50)
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -110,11 +111,15 @@ struct NowPlayingView: View {
         HStack {
             Image(systemName: "speaker.fill").foregroundStyle(.secondary)
             Slider(value: Binding(
-                get: { Double(state.volume) },
+                get: { systemVolume },
                 set: { newVal in
-                    state.volume = Int(newVal)
-                    Task { try? await ctrl.setVolume(Int(newVal)) } }),
+                    systemVolume = newVal
+                    SystemVolume.set(Int(newVal))
+                }),
                    in: 0...100)
+                .onAppear {
+                    if let v = SystemVolume.read() { systemVolume = Double(v) }
+                }
             Image(systemName: "speaker.wave.3.fill").foregroundStyle(.secondary)
         }
     }
