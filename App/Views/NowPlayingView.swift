@@ -6,47 +6,51 @@ struct NowPlayingView: View {
     let ctrl: PianobarCtrl
 
     var body: some View {
-        VStack(spacing: 16) {
-            albumArt
-                .frame(width: 220, height: 220)
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 12) {
+                albumArt
+                    .aspectRatio(1, contentMode: .fit)
+                    .frame(maxWidth: 240, maxHeight: 240)
 
-            if let song = state.currentSong {
-                Text(song.title).font(.title3).bold()
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                Text(song.artist).foregroundStyle(.secondary)
-                Text(song.album).font(.callout).foregroundStyle(.tertiary)
-                    .lineLimit(1)
-            } else {
-                Text("Not playing").foregroundStyle(.secondary)
+                if let song = state.currentSong {
+                    Text(song.title).font(.headline).bold()
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                    Text(song.artist).font(.subheadline).foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    Text(song.album).font(.caption).foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                } else {
+                    Text("Not playing").foregroundStyle(.secondary)
+                }
+
+                HStack(spacing: 8) {
+                    transportButton(systemName: state.isPlaying ? "pause.fill" : "play.fill") {
+                        Task { try? await ctrl.togglePlay(); state.setPlaying(!state.isPlaying) }
+                    }
+                    transportButton(systemName: "forward.fill") {
+                        Task { try? await ctrl.next() }
+                    }
+                    transportButton(systemName: "hand.thumbsdown") {
+                        Task { try? await ctrl.ban() }
+                    }
+                    transportButton(systemName: "hand.thumbsup") {
+                        Task { try? await ctrl.love() }
+                    }
+                }
+
+                progressBar
             }
-
-            HStack(spacing: 12) {
-                transportButton(systemName: state.isPlaying ? "pause.fill" : "play.fill") {
-                    Task { try? await ctrl.togglePlay(); state.setPlaying(!state.isPlaying) }
-                }
-                transportButton(systemName: "forward.fill") {
-                    Task { try? await ctrl.next() }
-                }
-                transportButton(systemName: "hand.thumbsdown") {
-                    Task { try? await ctrl.ban() }
-                }
-                transportButton(systemName: "hand.thumbsup") {
-                    Task { try? await ctrl.love() }
-                }
-            }
-
-            progressBar
+            .padding(16)
+            .frame(maxWidth: .infinity)
         }
-        .padding(24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func transportButton(systemName: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.title2)
-                .frame(width: 32, height: 32)
+                .font(.body)
+                .frame(width: 24, height: 24)
         }
         .buttonStyle(.bordered)
     }
@@ -64,10 +68,10 @@ struct NowPlayingView: View {
                     Spacer()
                     Text(format(song.durationSeconds))
                 }
-                .font(.caption)
+                .font(.caption2)
                 .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 12)
         }
     }
 
@@ -93,7 +97,7 @@ struct NowPlayingView: View {
             .fill(Color.secondary.opacity(0.2))
             .overlay(
                 Image(systemName: "music.note")
-                    .font(.system(size: 48))
+                    .font(.title)
                     .foregroundStyle(.secondary)
             )
     }
