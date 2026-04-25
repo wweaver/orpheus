@@ -1,4 +1,4 @@
-# QA Checklist — Plan 1
+# Orpheus — QA Checklist (Plan 1)
 
 Do these manual checks against a real Pandora account on a dev Mac with
 `brew install pianobar` before declaring Plan 1 done.

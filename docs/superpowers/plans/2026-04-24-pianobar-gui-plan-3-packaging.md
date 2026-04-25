@@ -1,4 +1,9 @@
-# PianobarGUI Plan 3 — Packaging & Distribution
+# Orpheus Plan 3 — Packaging & Distribution
+
+> Drafted under the working title PianobarGUI; ships as Orpheus.
+> The script names, paths, and product references below assume the
+> original title — substitute "Orpheus" for the user-facing strings
+> when (if) this plan is executed.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

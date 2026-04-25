@@ -1,4 +1,9 @@
-# PianobarGUI — Design Spec
+# Orpheus — Design Spec
+
+> Originally drafted under the working title **PianobarGUI**; the shipping
+> app is **Orpheus**. References below to "PianobarGUI" remain accurate
+> for filenames, the Swift package name, and the bundle identifier — only
+> user-facing identity changed.
 
 **Date:** 2026-04-24
 **Author:** wweaver

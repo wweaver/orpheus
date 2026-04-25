@@ -1,4 +1,4 @@
-# QA Checklist — Plan 2
+# Orpheus — QA Checklist (Plan 2)
 
 Do these manual checks against a real Pandora account before declaring
 Plan 2 done. Plan 1 checklist must already pass.

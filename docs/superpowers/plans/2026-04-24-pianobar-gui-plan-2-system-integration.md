@@ -1,4 +1,6 @@
-# PianobarGUI Plan 2 — System Integration
+# Orpheus Plan 2 — System Integration
+
+> Drafted under the working title PianobarGUI; ships as Orpheus.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
