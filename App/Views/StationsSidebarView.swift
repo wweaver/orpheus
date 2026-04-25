@@ -7,21 +7,14 @@ struct StationsSidebarView: View {
     @State private var filter: String = ""
 
     var body: some View {
-        VStack(spacing: 0) {
-            TextField("Filter", text: $filter)
-                .textFieldStyle(.roundedBorder)
-                .padding(.horizontal, 10)
-                .padding(.top, 32)
-                .padding(.bottom, 6)
-
-            StationsList(
-                stations: state.stations,
-                currentStationId: state.currentStation?.id,
-                isFirstSelection: state.currentSong == nil,
-                filter: filter,
-                ctrl: ctrl
-            )
-        }
+        StationsList(
+            stations: state.stations,
+            currentStationId: state.currentStation?.id,
+            isFirstSelection: state.currentSong == nil,
+            filter: filter,
+            ctrl: ctrl
+        )
+        .searchable(text: $filter, placement: .sidebar, prompt: "Filter")
         .frame(minWidth: 200)
     }
 }
@@ -62,6 +55,7 @@ private struct StationsList: View {
             }
         }
         .listStyle(.sidebar)
+        .frame(maxHeight: .infinity)
         .onChange(of: selection) { newID in
             guard !programmaticSelection else {
                 programmaticSelection = false
