@@ -4,6 +4,7 @@ import PianobarCore
 struct NowPlayingView: View {
     @ObservedObject var state: PlaybackState
     let ctrl: PianobarCtrl
+    @State private var systemVolume: Double = Double(SystemVolume.read() ?? 50)
 
     var body: some View {
         VStack(spacing: 16) {
@@ -38,6 +39,18 @@ struct NowPlayingView: View {
             if let song = state.currentSong {
                 Text("\(state.progressSeconds) / \(song.durationSeconds) sec")
                     .font(.caption).foregroundStyle(.secondary)
+            }
+
+            HStack {
+                Text("🔈").foregroundStyle(.secondary)
+                Slider(value: $systemVolume, in: 0...100) { editing in
+                    if !editing { SystemVolume.set(Int(systemVolume)) }
+                }
+                Text("🔊").foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 24)
+            .onAppear {
+                if let v = SystemVolume.read() { systemVolume = Double(v) }
             }
         }
         .padding(24)
