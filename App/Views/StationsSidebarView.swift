@@ -5,19 +5,21 @@ struct StationsSidebarView: View {
     @ObservedObject var state: PlaybackState
     let ctrl: PianobarCtrl
     @State private var selection: String?
+    @State private var addSheetPresented: Bool = false
+    @State private var stationToDelete: Station?
 
     var body: some View {
         VStack(spacing: 0) {
             List(selection: $selection) {
                 ForEach(state.stations) { station in
-                    row(for: station)
+                    rowText(for: station)
                         .tag(station.id)
                         .onTapGesture(count: 2) { switchTo(station) }
                         .contextMenu {
                             Button("Start station") { switchTo(station) }
                             Divider()
                             Button(role: .destructive) {
-                                delete(station)
+                                stationToDelete = station
                             } label: {
                                 Text("Delete station")
                             }
@@ -28,17 +30,18 @@ struct StationsSidebarView: View {
             Divider()
 
             HStack(spacing: 14) {
-                Button(action: addFromCurrentSong) {
+                Button {
+                    addSheetPresented = true
+                } label: {
                     Image(systemName: "plus")
                 }
                 .buttonStyle(.borderless)
-                .help("New station from current song")
-                .disabled(state.currentSong == nil)
+                .help("New station from search")
 
                 Button {
                     if let id = selection,
                        let station = state.stations.first(where: { $0.id == id }) {
-                        delete(station)
+                        stationToDelete = station
                     }
                 } label: {
                     Image(systemName: "minus")
@@ -52,21 +55,42 @@ struct StationsSidebarView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
         }
+        .sheet(isPresented: $addSheetPresented) {
+            AddStationSheet { query in
+                addSheetPresented = false
+                Task { try? await ctrl.createStationFromSearch(query) }
+            } onCancel: {
+                addSheetPresented = false
+            }
+        }
+        .confirmationDialog(
+            "Delete station?",
+            isPresented: Binding(
+                get: { stationToDelete != nil },
+                set: { if !$0 { stationToDelete = nil } }
+            ),
+            presenting: stationToDelete
+        ) { station in
+            Button("Delete \(station.name)", role: .destructive) {
+                delete(station)
+                stationToDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                stationToDelete = nil
+            }
+        } message: { station in
+            Text("Are you sure you want to delete \"\(station.name)\"? This can't be undone.")
+        }
     }
 
-    /// Always-2-children row keeps the layout buffer constant. The speaker
-    /// icon is always present; only its opacity changes for the current
-    /// station — avoids the conditional-children bug on macOS 26.4.1.
-    private func row(for station: Station) -> some View {
+    /// Pure-Text row. Style changes only — no nested HStack, no Image with
+    /// conditional opacity. macOS 26.4.1's List selection binding has been
+    /// flaky whenever rows contain anything beyond a single Text.
+    private func rowText(for station: Station) -> some View {
         let isCurrent = state.currentStation?.id == station.id
-        return HStack(spacing: 6) {
-            Image(systemName: "speaker.wave.2.fill")
-                .foregroundStyle(Color.accentColor)
-                .font(.caption)
-                .frame(width: 14)
-                .opacity(isCurrent ? 1 : 0)
-            Text(station.name)
-        }
+        return Text(station.name)
+            .fontWeight(isCurrent ? .semibold : .regular)
+            .foregroundStyle(isCurrent ? Color.accentColor : Color.primary)
     }
 
     private func switchTo(_ station: Station) {
@@ -82,10 +106,6 @@ struct StationsSidebarView: View {
         }
     }
 
-    private func addFromCurrentSong() {
-        Task { try? await ctrl.createStationFromSong() }
-    }
-
     /// Pianobar's `d` deletes the *currently playing* station, so to remove
     /// any other station we have to switch to it first, give pianobar a
     /// moment to settle, then send the delete.
@@ -99,5 +119,39 @@ struct StationsSidebarView: View {
             }
             try? await ctrl.deleteStation()
         }
+    }
+}
+
+private struct AddStationSheet: View {
+    @State private var query: String = ""
+    let onSubmit: (String) -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("New Station").font(.headline)
+            Text("Type a song or artist name. Pianobar will search Pandora and create a station from the first match.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            TextField("Song or artist", text: $query)
+                .textFieldStyle(.roundedBorder)
+                .onSubmit(submit)
+            HStack {
+                Spacer()
+                Button("Cancel", role: .cancel) { onCancel() }
+                    .keyboardShortcut(.cancelAction)
+                Button("Create") { submit() }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(20)
+        .frame(width: 360)
+    }
+
+    private func submit() {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        onSubmit(trimmed)
     }
 }

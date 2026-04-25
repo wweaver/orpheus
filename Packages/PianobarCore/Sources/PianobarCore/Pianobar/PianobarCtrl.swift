@@ -36,6 +36,18 @@ public actor PianobarCtrl {
 
     public func createStationFromSong()   async throws { try write("c\n") }
     public func createStationFromArtist() async throws { try write("v\n") }
+
+    /// Drives pianobar's interactive create-station flow over the FIFO.
+    /// Sequence: `c` → kind (`s` song / `a` artist / etc.) → search query →
+    /// pick the first result (`0`). Pianobar reads each line in turn.
+    public func createStationFromSearch(_ query: String) async throws {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        try write("c\n")
+        try write("s\n")
+        try write("\(trimmed)\n")
+        try write("0\n")
+    }
     public func deleteStation()           async throws { try write("d\n") }
     public func renameStation(_ newName: String) async throws {
         try write("r\(newName)\n")
