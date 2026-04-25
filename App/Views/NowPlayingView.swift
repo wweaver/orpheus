@@ -1,130 +1,47 @@
 import SwiftUI
 import PianobarCore
 
+/// Minimal player UI to dodge the SwiftUI layout-engine crash on
+/// macOS 26.4.1. No AsyncImage, no Menu, no Slider, no helper-returning
+/// closures — just Text + Buttons. We bring features back once the
+/// baseline is stable.
 struct NowPlayingView: View {
     @ObservedObject var state: PlaybackState
     let ctrl: PianobarCtrl
-    @State private var systemVolume: Double = Double(SystemVolume.read() ?? 50)
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 16) {
-                albumArt
-                    .frame(maxWidth: 240, maxHeight: 240)
-                    .aspectRatio(1, contentMode: .fit)
-                if let song = state.currentSong {
-                    VStack(spacing: 4) {
-                        Text(song.title).font(.title3).bold()
-                            .lineLimit(2).multilineTextAlignment(.center)
-                        Text(song.artist).font(.body).foregroundStyle(.secondary)
-                            .lineLimit(1)
-                        Text(song.album).font(.callout).foregroundStyle(.tertiary)
-                            .lineLimit(1)
-                    }
-                } else {
-                    Text("Not playing").foregroundStyle(.secondary)
-                }
-
-                controls
-
-                progress
-
-                volume
+        VStack(spacing: 16) {
+            if let song = state.currentSong {
+                Text(song.title).font(.title3).bold()
+                    .multilineTextAlignment(.center)
+                Text(song.artist).foregroundStyle(.secondary)
+                Text(song.album).font(.callout).foregroundStyle(.tertiary)
+            } else {
+                Text("Not playing").foregroundStyle(.secondary)
             }
-            .padding(20)
-            .frame(maxWidth: .infinity)
-        }
-    }
 
-    @ViewBuilder private var albumArt: some View {
-        if let url = state.currentSong?.coverArtURL {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let img): img.resizable().scaledToFit()
-                default: placeholderArt
+            HStack(spacing: 16) {
+                Button(state.isPlaying ? "Pause" : "Play") {
+                    Task { try? await ctrl.togglePlay(); state.setPlaying(!state.isPlaying) }
+                }
+                Button("Next") {
+                    Task { try? await ctrl.next() }
+                }
+                Button("👎") {
+                    Task { try? await ctrl.ban() }
+                }
+                Button("👍") {
+                    Task { try? await ctrl.love() }
                 }
             }
-        } else {
-            placeholderArt
-        }
-    }
+            .buttonStyle(.bordered)
 
-    private var placeholderArt: some View {
-        RoundedRectangle(cornerRadius: 8).fill(Color.secondary.opacity(0.2))
-            .overlay(Image(systemName: "music.note").font(.system(size: 64))
-                .foregroundStyle(.secondary))
-    }
-
-    private var controls: some View {
-        HStack(spacing: 16) {
-            button(systemName: state.isPlaying ? "pause.fill" : "play.fill") {
-                Task { try? await ctrl.togglePlay(); state.setPlaying(!state.isPlaying) }
-            }
-            button(systemName: "forward.fill") {
-                Task { try? await ctrl.next() }
-            }
-            button(systemName: "hand.thumbsdown",
-                   active: state.currentSong?.rating == .banned) {
-                Task { try? await ctrl.ban() }
-            }
-            button(systemName: "hand.thumbsup",
-                   active: state.currentSong?.rating == .loved) {
-                Task { try? await ctrl.love() }
-            }
-            Menu {
-                Button("Bookmark Song")   { Task { try? await ctrl.bookmarkSong() } }
-                Button("Bookmark Artist") { Task { try? await ctrl.bookmarkArtist() } }
-                Button("Tired of Track")  { Task { try? await ctrl.tired() } }
-                if let url = state.currentSong?.detailURL {
-                    Button("Open in Pandora") { NSWorkspace.shared.open(url) }
-                }
-            } label: {
-                Image(systemName: "ellipsis")
+            if let song = state.currentSong {
+                Text("\(state.progressSeconds) / \(song.durationSeconds) sec")
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
-    }
-
-    private func button(systemName: String, active: Bool = false,
-                        action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.title2)
-                .foregroundStyle(active ? Color.accentColor : Color.primary)
-                .frame(width: 36, height: 36)
-        }
-        .buttonStyle(.borderless)
-    }
-
-    private var progress: some View {
-        VStack(spacing: 4) {
-            ProgressView(value: Double(state.progressSeconds),
-                         total: Double(max(state.currentSong?.durationSeconds ?? 1, 1)))
-            HStack {
-                Text(format(state.progressSeconds))
-                Spacer()
-                Text(format(state.currentSong?.durationSeconds ?? 0))
-            }.font(.caption).foregroundStyle(.secondary)
-        }
-    }
-
-    private var volume: some View {
-        HStack {
-            Image(systemName: "speaker.fill").foregroundStyle(.secondary)
-            Slider(value: Binding(
-                get: { systemVolume },
-                set: { newVal in
-                    systemVolume = newVal
-                    SystemVolume.set(Int(newVal))
-                }),
-                   in: 0...100)
-                .onAppear {
-                    if let v = SystemVolume.read() { systemVolume = Double(v) }
-                }
-            Image(systemName: "speaker.wave.3.fill").foregroundStyle(.secondary)
-        }
-    }
-
-    private func format(_ seconds: Int) -> String {
-        String(format: "%d:%02d", seconds / 60, seconds % 60)
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
