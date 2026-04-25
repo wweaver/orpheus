@@ -7,7 +7,7 @@ struct NowPlayingView: View {
     var windowSize: CGSize = .zero
 
     private var showArt: Bool {
-        windowSize.height >= 510
+        windowSize.height >= 425
     }
     private var showHeader: Bool {
         windowSize.height >= 260
