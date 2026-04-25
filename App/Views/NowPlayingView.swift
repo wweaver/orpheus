@@ -1,16 +1,15 @@
 import SwiftUI
 import PianobarCore
 
-/// Minimal player UI to dodge the SwiftUI layout-engine crash on
-/// macOS 26.4.1. No AsyncImage, no Menu, no Slider, no helper-returning
-/// closures — just Text + Buttons. We bring features back once the
-/// baseline is stable.
 struct NowPlayingView: View {
     @ObservedObject var state: PlaybackState
     let ctrl: PianobarCtrl
 
     var body: some View {
         VStack(spacing: 16) {
+            albumArt
+                .frame(width: 220, height: 220)
+
             if let song = state.currentSong {
                 Text(song.title).font(.title3).bold()
                     .multilineTextAlignment(.center)
@@ -43,5 +42,28 @@ struct NowPlayingView: View {
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private var albumArt: some View {
+        if let url = state.currentSong?.coverArtURL {
+            AsyncImage(url: url) { image in
+                image.resizable().scaledToFit()
+            } placeholder: {
+                placeholderArt
+            }
+        } else {
+            placeholderArt
+        }
+    }
+
+    private var placeholderArt: some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(Color.secondary.opacity(0.2))
+            .overlay(
+                Image(systemName: "music.note")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.secondary)
+            )
     }
 }
