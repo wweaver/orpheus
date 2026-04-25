@@ -20,19 +20,21 @@ struct MainWindowView: View {
         }
     }
 
-    /// Player on the left, optional History pane on the right. Toolbar
-    /// button toggles the history pane in/out with an animation.
+    /// Player on the left, History pane on the right. The pane is always part
+    /// of the layout — its width animates between 0 and 260pt — which avoids
+    /// a SwiftUI HStack-cache crash that triggered when toggling its presence
+    /// conditionally with .transition.
     private var detailWithOptionalHistory: some View {
         HStack(spacing: 0) {
             NowPlayingView(state: state, ctrl: ctrl)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            if historyVisible {
+            HStack(spacing: 0) {
                 Divider()
                 HistoryView(state: state, ctrl: ctrl)
-                    .frame(width: 260)
-                    .transition(.move(edge: .trailing))
             }
+            .frame(width: historyVisible ? 260 : 0)
+            .clipped()
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
