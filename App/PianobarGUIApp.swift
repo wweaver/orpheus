@@ -15,18 +15,14 @@ struct PianobarGUIApp: App {
     }
 
     var body: some Scene {
-        WindowGroup(id: "main") {
+        Window("Orpheus", id: "main") {
             RootView()
                 .environmentObject(bootstrap)
                 .task { await bootstrap.start() }
                 .frame(minWidth: 480, minHeight: 420)
-                .navigationTitle("Orpheus")
         }
         .windowResizability(.contentMinSize)
         .defaultSize(width: 560, height: 560)
-        .commands {
-            CommandGroup(replacing: .newItem) { } // disable File → New
-        }
 
         Settings {
             PreferencesView().environmentObject(bootstrap)
