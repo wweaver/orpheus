@@ -4,17 +4,18 @@ import PianobarCore
 struct StationsSidebarView: View {
     @ObservedObject var state: PlaybackState
     let ctrl: PianobarCtrl
+    @AppStorage(Prefs.Keys.stationClickCount) private var stationClickCount: Int = 2
     @State private var selection: String?
     @State private var addSheetPresented: Bool = false
     @State private var stationToDelete: Station?
+    @State private var lastSwitchRequestID: String?
+    @State private var lastSwitchRequestDate: Date = .distantPast
 
     var body: some View {
         VStack(spacing: 0) {
             List(selection: $selection) {
                 ForEach(state.stations) { station in
-                    rowText(for: station)
-                        .tag(station.id)
-                        .onTapGesture(count: 2) { switchTo(station) }
+                    row(for: station)
                         .contextMenu {
                             Button("Start station") { switchTo(station) }
                             Divider()
@@ -101,6 +102,30 @@ struct StationsSidebarView: View {
             .foregroundStyle(isCurrent ? Color.accentColor : Color.primary)
     }
 
+    @ViewBuilder
+    private func row(for station: Station) -> some View {
+        let base = rowText(for: station)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .tag(station.id)
+
+        if stationClickCount == 1 {
+            base.onTapGesture {
+                select(station)
+                switchTo(station)
+            }
+        } else {
+            base
+                .onTapGesture {
+                    select(station)
+                }
+                .onTapGesture(count: 2) {
+                    select(station)
+                    switchTo(station)
+                }
+        }
+    }
+
     private func activateSelectedStation() {
         guard let id = selection,
               let station = state.stations.first(where: { $0.id == id })
@@ -108,9 +133,21 @@ struct StationsSidebarView: View {
         switchTo(station)
     }
 
+    private func select(_ station: Station) {
+        selection = station.id
+    }
+
     private func switchTo(_ station: Station) {
         guard let idx = state.stations.firstIndex(where: { $0.id == station.id })
         else { return }
+        let now = Date()
+        if lastSwitchRequestID == station.id,
+           now.timeIntervalSince(lastSwitchRequestDate) < 0.5 {
+            return
+        }
+        lastSwitchRequestID = station.id
+        lastSwitchRequestDate = now
+
         let isFirst = state.currentSong == nil
         Task {
             if isFirst {

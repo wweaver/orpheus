@@ -52,14 +52,22 @@ private struct MenuBarTitle: View {
 struct MenuBarContent: View {
     @EnvironmentObject var bootstrap: AppBootstrap
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         if let state = bootstrap.playbackState, let ctrl = bootstrap.ctrl {
-            MenuBarCommands(state: state, ctrl: ctrl, openWindow: openWindow)
+            MenuBarCommands(
+                state: state,
+                ctrl: ctrl,
+                openWindow: openWindow,
+                openSettings: openSettings
+            )
         } else {
             Button("Starting…") {}.disabled(true)
             Divider()
             Button("Show Orpheus") { MenuBarActions.showMainWindow(openWindow: openWindow) }
+            Button("Preferences…") { MenuBarActions.openSettings(openSettings: openSettings) }
+                .keyboardShortcut(",")
             Button("Quit Orpheus") { NSApp.terminate(nil) }
                 .keyboardShortcut("q")
         }
@@ -70,6 +78,7 @@ private struct MenuBarCommands: View {
     @ObservedObject var state: PlaybackState
     let ctrl: PianobarCtrl
     let openWindow: OpenWindowAction
+    let openSettings: OpenSettingsAction
 
     var body: some View {
         Button(state.isPlaying ? "Pause" : "Play") {
@@ -115,7 +124,7 @@ private struct MenuBarCommands: View {
         Divider()
 
         Button("Show Orpheus") { MenuBarActions.showMainWindow(openWindow: openWindow) }
-        Button("Preferences…") { MenuBarActions.openSettings() }
+        Button("Preferences…") { MenuBarActions.openSettings(openSettings: openSettings) }
             .keyboardShortcut(",")
         Button("Quit Orpheus") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
@@ -134,8 +143,8 @@ enum MenuBarActions {
         openWindow(id: "main")
     }
 
-    static func openSettings() {
+    static func openSettings(openSettings: OpenSettingsAction) {
         NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        openSettings()
     }
 }

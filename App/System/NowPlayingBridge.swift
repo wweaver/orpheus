@@ -9,6 +9,7 @@ final class NowPlayingBridge {
     private let state: PlaybackState
     private let ctrl: PianobarCtrl
     private var subs = Set<AnyCancellable>()
+    private var commandTargets: [(MPRemoteCommand, Any)] = []
 
     init(state: PlaybackState, ctrl: PianobarCtrl) {
         self.state = state
@@ -20,37 +21,58 @@ final class NowPlayingBridge {
     private func registerCommands() {
         let c = MPRemoteCommandCenter.shared()
 
-        c.playCommand.addTarget { [weak self] _ in
-            Task { try? await self?.ctrl.play(); self?.state.setPlaying(true) }
+        commandTargets.append((c.playCommand, c.playCommand.addTarget { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.setPlayback(true)
+            }
             return .success
-        }
-        c.pauseCommand.addTarget { [weak self] _ in
-            Task { try? await self?.ctrl.pause(); self?.state.setPlaying(false) }
+        }))
+        commandTargets.append((c.pauseCommand, c.pauseCommand.addTarget { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.setPlayback(false)
+            }
             return .success
-        }
-        c.togglePlayPauseCommand.addTarget { [weak self] _ in
+        }))
+        commandTargets.append((c.togglePlayPauseCommand, c.togglePlayPauseCommand.addTarget { [weak self] _ in
             guard let self else { return .commandFailed }
-            Task { try? await self.ctrl.togglePlay(); self.state.setPlaying(!self.state.isPlaying) }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                await self.setPlayback(!self.state.isPlaying)
+            }
             return .success
-        }
-        c.nextTrackCommand.addTarget { [weak self] _ in
+        }))
+        commandTargets.append((c.nextTrackCommand, c.nextTrackCommand.addTarget { [weak self] _ in
             Task { try? await self?.ctrl.next() }
             return .success
-        }
-        c.likeCommand.addTarget { [weak self] _ in
+        }))
+        commandTargets.append((c.likeCommand, c.likeCommand.addTarget { [weak self] _ in
             Task { try? await self?.ctrl.love() }
             return .success
-        }
-        c.dislikeCommand.addTarget { [weak self] _ in
+        }))
+        commandTargets.append((c.dislikeCommand, c.dislikeCommand.addTarget { [weak self] _ in
             Task { try? await self?.ctrl.ban() }
             return .success
-        }
+        }))
 
         // Disable what we can't support.
         c.previousTrackCommand.isEnabled = false
         c.changePlaybackPositionCommand.isEnabled = false
         c.seekForwardCommand.isEnabled = false
         c.seekBackwardCommand.isEnabled = false
+    }
+
+    func invalidate() {
+        for (command, target) in commandTargets {
+            command.removeTarget(target)
+        }
+        commandTargets.removeAll()
+        subs.removeAll()
+    }
+
+    private func setPlayback(_ shouldPlay: Bool) async {
+        guard state.isPlaying != shouldPlay else { return }
+        try? await ctrl.togglePlay()
+        state.setPlaying(shouldPlay)
     }
 
     private func observeState() {
@@ -67,7 +89,7 @@ final class NowPlayingBridge {
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
             return
         }
-        var info: [String: Any] = [
+        let info: [String: Any] = [
             MPMediaItemPropertyTitle: song.title,
             MPMediaItemPropertyArtist: song.artist,
             MPMediaItemPropertyAlbumTitle: song.album,

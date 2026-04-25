@@ -20,6 +20,7 @@ final class GlobalHotkeys {
     private let state: PlaybackState
     private var handlers: [Action: EventHotKeyRef] = [:]
     private var handlerRef: EventHandlerRef?
+    private var defaultsObserver: NSObjectProtocol?
     private static var shared: GlobalHotkeys?  // for Carbon C callback
 
     init(state: PlaybackState, ctrl: PianobarCtrl) {
@@ -28,10 +29,27 @@ final class GlobalHotkeys {
         GlobalHotkeys.shared = self
         installCarbonHandler()
         reloadAllBindings()
-        NotificationCenter.default.addObserver(
+        defaultsObserver = NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification, object: nil, queue: .main
         ) { [weak self] _ in
             Task { @MainActor [weak self] in self?.reloadAllBindings() }
+        }
+    }
+
+    func invalidate() {
+        for action in Action.allCases {
+            unregister(action: action)
+        }
+        if let handlerRef {
+            RemoveEventHandler(handlerRef)
+            self.handlerRef = nil
+        }
+        if let defaultsObserver {
+            NotificationCenter.default.removeObserver(defaultsObserver)
+            self.defaultsObserver = nil
+        }
+        if Self.shared === self {
+            Self.shared = nil
         }
     }
 

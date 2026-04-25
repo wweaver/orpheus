@@ -8,6 +8,7 @@ import PianobarCore
 @MainActor
 final class AppBootstrap: ObservableObject {
     @Published var needsLogin = false
+    @Published private(set) var startupError: String?
     @Published private(set) var playbackState: PlaybackState?
     @Published private(set) var ctrl: PianobarCtrl?
 
@@ -49,6 +50,7 @@ final class AppBootstrap: ObservableObject {
     func saveCredentials(email: String, password: String) {
         try? keychain.save(email: email, password: password)
         needsLogin = false
+        startupError = nil
         Task { await launch(email: email, password: password) }
     }
 
@@ -60,6 +62,7 @@ final class AppBootstrap: ObservableObject {
         stationTracker?.cancel()
         stationTracker = nil
         snapshotSubs.removeAll()
+        startupError = nil
         startInvoked = false  // allow sign-in flow to call start() again.
         Task {
             try? await process?.stop()
@@ -68,11 +71,19 @@ final class AppBootstrap: ObservableObject {
             ctrl = nil
             bridge = nil
             process = nil
-            nowPlayingBridge = nil
-            notificationPresenter = nil
-            globalHotkeys = nil
+            clearPlaybackIntegrations()
             needsLogin = true
         }
+    }
+
+    func retryPlayback() {
+        startupError = nil
+        startInvoked = false
+        Task { await start() }
+    }
+
+    func dismissStartupError() {
+        startupError = nil
     }
 
     /// Install a one-shot observer on NSApplication.willTerminateNotification
@@ -88,7 +99,9 @@ final class AppBootstrap: ObservableObject {
             forName: NSApplication.willTerminateNotification,
             object: nil, queue: .main
         ) { [weak self] _ in
-            self?.handleWillTerminate()
+            MainActor.assumeIsolated {
+                self?.handleWillTerminate()
+            }
         }
     }
 
@@ -138,6 +151,7 @@ final class AppBootstrap: ObservableObject {
     }
 
     private func launch(email: String, password: String) async {
+        startupError = nil
         try? FileManager.default.createDirectory(at: appSupportDir, withIntermediateDirectories: true)
         try? FileManager.default.createDirectory(at: configDir, withIntermediateDirectories: true)
 
@@ -361,11 +375,28 @@ final class AppBootstrap: ObservableObject {
         supervisorWatch?.cancel()
         supervisorWatch = Task { @MainActor [weak self, weak state] in
             for await _ in proc.supervisorFailures {
-                state?.setErrorBanner("pianobar stopped responding. Click Retry to reconnect.")
-                self?.playbackState = nil  // force UI to show a "Starting…" or retry state
+                guard let self else { return }
+                let message = "pianobar stopped responding. Click Retry to reconnect."
+                state?.setErrorBanner(message)
+                self.startupError = message
+                self.playbackState = nil
+                self.ctrl = nil
+                self.process = nil
+                self.clearPlaybackIntegrations()
+                await self.bridge?.stop()
+                self.bridge = nil
+                self.startInvoked = false
                 break
             }
         }
+    }
+
+    private func clearPlaybackIntegrations() {
+        nowPlayingBridge?.invalidate()
+        nowPlayingBridge = nil
+        notificationPresenter = nil
+        globalHotkeys?.invalidate()
+        globalHotkeys = nil
     }
 
     private func resolvePianobarPath() -> String? {

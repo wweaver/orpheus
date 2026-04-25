@@ -53,6 +53,15 @@ struct RootView: View {
                 })
             } else if let state = bootstrap.playbackState, let ctrl = bootstrap.ctrl {
                 MainWindowView(state: state, ctrl: ctrl)
+            } else if let startupError = bootstrap.startupError {
+                VStack(spacing: 0) {
+                    ErrorBanner(
+                        message: startupError,
+                        onRetry: { bootstrap.retryPlayback() },
+                        onDismiss: { bootstrap.dismissStartupError() }
+                    )
+                    Spacer(minLength: 0)
+                }
             } else {
                 ProgressView("Starting…").padding()
             }
