@@ -23,9 +23,12 @@ for arg in "$@"; do
     esac
 done
 
-DEST="$HOME/Applications/PianobarGUI.app"
+DEST="$HOME/Applications/Orpheus.app"
 DERIVED="$ROOT/build-release"
-BUILT_APP="$DERIVED/Build/Products/Release/PianobarGUI.app"
+BUILT_APP="$DERIVED/Build/Products/Release/Orpheus.app"
+
+# Remove a stale PianobarGUI.app from earlier installs.
+rm -rf "$HOME/Applications/PianobarGUI.app"
 
 echo "▶︎ Regenerating Xcode project"
 xcodegen generate >/dev/null
@@ -42,6 +45,7 @@ xcodebuild \
 [ -d "$BUILT_APP" ] || { echo "Built app not found at $BUILT_APP" >&2; exit 1; }
 
 echo "▶︎ Stopping any running copy"
+killall Orpheus 2>/dev/null || true
 killall PianobarGUI 2>/dev/null || true
 # Give the atexit hook a moment to kill the child pianobar before we nuke
 # the bundle out from under it.

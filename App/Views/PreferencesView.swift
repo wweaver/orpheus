@@ -62,7 +62,7 @@ struct PreferencesView: View {
             Form {
                 Toggle("Notify on song change", isOn: $showNotifications)
                 Text("If notifications don't appear, make sure "
-                     + "PianobarGUI is allowed to notify in "
+                     + "Orpheus is allowed to notify in "
                      + "System Settings → Notifications.")
                     .font(.caption).foregroundStyle(.secondary)
             }
@@ -88,7 +88,7 @@ struct PreferencesView: View {
         tab {
             Form {
                 Toggle("Pause on quit, resume on launch", isOn: $keepPianobarAlive)
-                Text("Experimental. When enabled, quitting PianobarGUI pauses "
+                Text("Experimental. When enabled, quitting Orpheus pauses "
                      + "pianobar and leaves it running in the background; "
                      + "relaunching reattaches to the same instance and "
                      + "resumes the paused song exactly where it left off. "

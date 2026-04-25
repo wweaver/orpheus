@@ -59,8 +59,8 @@ struct MenuBarContent: View {
         } else {
             Button("Starting…") {}.disabled(true)
             Divider()
-            Button("Show PianobarGUI") { MenuBarActions.showMainWindow(openWindow: openWindow) }
-            Button("Quit PianobarGUI") { NSApp.terminate(nil) }
+            Button("Show Orpheus") { MenuBarActions.showMainWindow(openWindow: openWindow) }
+            Button("Quit Orpheus") { NSApp.terminate(nil) }
                 .keyboardShortcut("q")
         }
     }
@@ -114,10 +114,10 @@ private struct MenuBarCommands: View {
 
         Divider()
 
-        Button("Show PianobarGUI") { MenuBarActions.showMainWindow(openWindow: openWindow) }
+        Button("Show Orpheus") { MenuBarActions.showMainWindow(openWindow: openWindow) }
         Button("Preferences…") { MenuBarActions.openSettings() }
             .keyboardShortcut(",")
-        Button("Quit PianobarGUI") { NSApp.terminate(nil) }
+        Button("Quit Orpheus") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
     }
 }

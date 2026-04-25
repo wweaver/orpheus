@@ -17,11 +17,13 @@ targets:
     info:
       path: App/Info.plist
       properties:
-        CFBundleDisplayName: PianobarGUI
+        CFBundleDisplayName: Orpheus
+        CFBundleName: Orpheus
         LSApplicationCategoryType: public.app-category.music
         LSMinimumSystemVersion: "13.0"
     settings:
       base:
+        PRODUCT_NAME: Orpheus
         PRODUCT_BUNDLE_IDENTIFIER: org.pianobar-gui.PianobarGUI
         GENERATE_INFOPLIST_FILE: YES
         ENABLE_HARDENED_RUNTIME: YES

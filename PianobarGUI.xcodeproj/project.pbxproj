@@ -242,6 +242,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.pianobar-gui.PianobarGUI";
+				PRODUCT_NAME = Orpheus;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.9;
 			};
@@ -319,6 +320,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.pianobar-gui.PianobarGUI";
+				PRODUCT_NAME = Orpheus;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.9;
 			};
