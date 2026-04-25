@@ -4,49 +4,38 @@ import PianobarCore
 struct HistoryView: View {
     @ObservedObject var state: PlaybackState
     let ctrl: PianobarCtrl
-    @State private var expanded = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            if expanded {
-                Divider()
-                list
-            }
-        }
-        .background(.background)
-    }
-
-    private var header: some View {
-        Button {
-            expanded.toggle()
-        } label: {
+        VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                Text("History").bold()
+                Text("History").font(.headline)
                 Spacer()
-                if let most = state.history.first {
-                    Text("\(most.title) · \(most.artist)")
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
             }
-            .padding(.horizontal, 12).padding(.vertical, 8)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
+            .padding(.horizontal, 12).padding(.vertical, 10)
 
-    private var list: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(state.history.enumerated()), id: \.offset) { _, song in
-                    row(song).padding(.horizontal, 12).padding(.vertical, 6)
-                    Divider()
+            Divider()
+
+            if state.history.isEmpty {
+                Spacer()
+                Text("Songs you've played will appear here.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(20)
+                Spacer()
+            } else {
+                List {
+                    ForEach(Array(state.history.enumerated()), id: \.offset) { _, song in
+                        row(song)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12))
+                    }
                 }
+                .listStyle(.plain)
             }
         }
-        .frame(maxHeight: 220)
+        .frame(minWidth: 220)
+        .background(.background)
     }
 
     private func row(_ song: SongInfo) -> some View {
