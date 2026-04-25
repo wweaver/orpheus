@@ -26,6 +26,14 @@ struct StationsSidebarView: View {
                         }
                 }
             }
+            .onKeyPress(.return) {
+                activateSelectedStation()
+                return .handled
+            }
+            .onKeyPress(.space) {
+                activateSelectedStation()
+                return .handled
+            }
 
             Divider()
 
@@ -91,6 +99,13 @@ struct StationsSidebarView: View {
         return Text(station.name)
             .fontWeight(isCurrent ? .semibold : .regular)
             .foregroundStyle(isCurrent ? Color.accentColor : Color.primary)
+    }
+
+    private func activateSelectedStation() {
+        guard let id = selection,
+              let station = state.stations.first(where: { $0.id == id })
+        else { return }
+        switchTo(station)
     }
 
     private func switchTo(_ station: Station) {
