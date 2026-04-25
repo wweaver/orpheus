@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# Generate an AppIcon.appiconset for PianobarGUI by rendering a single
-# 1024×1024 base icon with Swift+CoreGraphics, then resizing to every
-# size macOS expects via sips. Idempotent: re-running overwrites.
+# Generate an AppIcon.appiconset for Orpheus.
+#
+# Uses App/Resources/AppIcon-source.png as the base when present; falls
+# back to a CoreGraphics-rendered placeholder otherwise. Resampled to
+# every size macOS expects via sips. Idempotent.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SET="$ROOT/App/Assets.xcassets/AppIcon.appiconset"
+SOURCE="$ROOT/App/Resources/AppIcon-source.png"
 mkdir -p "$SET"
 mkdir -p "$ROOT/App/Assets.xcassets"
 
@@ -19,12 +22,16 @@ cat > "$ROOT/App/Assets.xcassets/Contents.json" <<'EOF'
 }
 EOF
 
-# Render the 1024×1024 base. Using a heredoc-fed swift script with AppKit so
-# we don't need any external image libraries.
-TMP_BASE="$(mktemp -t pgui-icon-base).png"
+TMP_BASE="$(mktemp -t orpheus-icon-base).png"
 trap "rm -f '$TMP_BASE'" EXIT
 
-xcrun --toolchain swift swift - "$TMP_BASE" <<'SWIFT'
+if [ -f "$SOURCE" ]; then
+    echo "▶︎ Using $SOURCE"
+    # Upscale to 1024×1024 so every downsize step starts from the same canvas.
+    sips -s format png -z 1024 1024 "$SOURCE" --out "$TMP_BASE" >/dev/null
+else
+    echo "▶︎ No App/Resources/AppIcon-source.png found; rendering placeholder."
+    xcrun --toolchain swift swift - "$TMP_BASE" <<'SWIFT'
 import AppKit
 import CoreGraphics
 
@@ -111,6 +118,7 @@ let bitmap = NSBitmapImageRep(cgImage: cgImage)
 guard let data = bitmap.representation(using: .png, properties: [:]) else { exit(1) }
 try! data.write(to: URL(fileURLWithPath: outPath))
 SWIFT
+fi
 
 echo "✓ Base icon rendered at $TMP_BASE"
 
