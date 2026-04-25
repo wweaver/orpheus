@@ -19,9 +19,10 @@ struct PianobarGUIApp: App {
             RootView()
                 .environmentObject(bootstrap)
                 .task { await bootstrap.start() }
-                .frame(minWidth: 320, minHeight: 280)
+                .frame(minWidth: 320, idealWidth: 560,  maxWidth: 780,
+                       minHeight: 280, idealHeight: 560, maxHeight: 560)
         }
-        .windowResizability(.contentMinSize)
+        .windowResizability(.contentSize)
         .defaultSize(width: 560, height: 560)
 
         Settings {

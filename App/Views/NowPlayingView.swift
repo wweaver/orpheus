@@ -6,11 +6,27 @@ struct NowPlayingView: View {
     let ctrl: PianobarCtrl
 
     var body: some View {
+        GeometryReader { geo in
+            playerContent(showArt: shouldShowArt(in: geo.size))
+        }
+    }
+
+    private func shouldShowArt(in size: CGSize) -> Bool {
+        // Drop the album art when the player pane is short enough that
+        // showing both art and controls would crowd the time labels off
+        // the bottom edge.
+        size.height >= 360 && size.width >= 260
+    }
+
+    @ViewBuilder
+    private func playerContent(showArt: Bool) -> some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 12) {
-                albumArt
-                    .aspectRatio(1, contentMode: .fit)
-                    .frame(maxWidth: 240)
+                if showArt {
+                    albumArt
+                        .aspectRatio(1, contentMode: .fit)
+                        .frame(maxWidth: 240)
+                }
 
                 if let song = state.currentSong {
                     Text(song.title).font(.headline).bold()
