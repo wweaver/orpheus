@@ -21,6 +21,7 @@ final class AppBootstrap: ObservableObject {
     private var stationTracker: Task<Void, Never>?
     private var willTerminateObserver: NSObjectProtocol?
     private var snapshotSubs = Set<AnyCancellable>()
+    private var startInvoked: Bool = false
 
     private var appSupportDir: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -32,10 +33,12 @@ final class AppBootstrap: ObservableObject {
     private var pidFilePath: String { appSupportDir.appendingPathComponent("pianobar.pid").path }
 
     func start() async {
-        // Idempotency: if a previous .task call already started us, don't
-        // do it again. This guards against SwiftUI re-running the modifier
-        // when window state restores or when the view re-attaches.
-        guard playbackState == nil, ctrl == nil else { return }
+        // Strict idempotency. Set the flag BEFORE any await so two concurrent
+        // .task invocations from SwiftUI (which can happen when the
+        // WindowGroup's RootView is restored or re-attached) can't both pass
+        // a `playbackState == nil` check before either has populated it.
+        if startInvoked { return }
+        startInvoked = true
         guard let creds = keychain.load() else {
             needsLogin = true
             return
@@ -57,6 +60,7 @@ final class AppBootstrap: ObservableObject {
         stationTracker?.cancel()
         stationTracker = nil
         snapshotSubs.removeAll()
+        startInvoked = false  // allow sign-in flow to call start() again.
         Task {
             try? await process?.stop()
             await bridge?.stop()

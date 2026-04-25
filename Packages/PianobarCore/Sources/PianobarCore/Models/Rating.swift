@@ -1,6 +1,6 @@
 import Foundation
 
-public enum Rating: String, Equatable, Sendable, Codable {
+public enum Rating: String, Equatable, Sendable {
     case unrated
     case loved
     case banned
