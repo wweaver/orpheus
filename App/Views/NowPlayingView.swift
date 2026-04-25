@@ -13,35 +13,66 @@ struct NowPlayingView: View {
             if let song = state.currentSong {
                 Text(song.title).font(.title3).bold()
                     .multilineTextAlignment(.center)
+                    .lineLimit(2)
                 Text(song.artist).foregroundStyle(.secondary)
                 Text(song.album).font(.callout).foregroundStyle(.tertiary)
+                    .lineLimit(1)
             } else {
                 Text("Not playing").foregroundStyle(.secondary)
             }
 
-            HStack(spacing: 16) {
-                Button(state.isPlaying ? "Pause" : "Play") {
+            HStack(spacing: 12) {
+                transportButton(systemName: state.isPlaying ? "pause.fill" : "play.fill") {
                     Task { try? await ctrl.togglePlay(); state.setPlaying(!state.isPlaying) }
                 }
-                Button("Next") {
+                transportButton(systemName: "forward.fill") {
                     Task { try? await ctrl.next() }
                 }
-                Button("👎") {
+                transportButton(systemName: "hand.thumbsdown") {
                     Task { try? await ctrl.ban() }
                 }
-                Button("👍") {
+                transportButton(systemName: "hand.thumbsup") {
                     Task { try? await ctrl.love() }
                 }
             }
-            .buttonStyle(.bordered)
 
-            if let song = state.currentSong {
-                Text("\(state.progressSeconds) / \(song.durationSeconds) sec")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
+            progressBar
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func transportButton(systemName: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.title2)
+                .frame(width: 32, height: 32)
+        }
+        .buttonStyle(.bordered)
+    }
+
+    @ViewBuilder
+    private var progressBar: some View {
+        if let song = state.currentSong, song.durationSeconds > 0 {
+            VStack(spacing: 4) {
+                ProgressView(
+                    value: Double(min(state.progressSeconds, song.durationSeconds)),
+                    total: Double(song.durationSeconds)
+                )
+                HStack {
+                    Text(format(state.progressSeconds))
+                    Spacer()
+                    Text(format(song.durationSeconds))
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 24)
+        }
+    }
+
+    private func format(_ seconds: Int) -> String {
+        String(format: "%d:%02d", seconds / 60, seconds % 60)
     }
 
     @ViewBuilder
