@@ -21,6 +21,29 @@ final class EventParserTests: XCTestCase {
         XCTAssertEqual(song.rating, .unrated)
         XCTAssertEqual(song.stationName, "Imagine Dragons Radio")
         XCTAssertEqual(song.coverArtURL?.absoluteString, "https://example.com/cover.jpg")
+        XCTAssertEqual(song.detailURL?.absoluteString, "https://pandora.com/song/shivers")
+        XCTAssertNil(song.artistDetailURL)
+        XCTAssertNil(song.albumDetailURL)
+    }
+
+    func testParsesPandoraDeepLinkURLs() {
+        let payload = """
+        artist=Bob Dylan
+        title=Like a Rolling Stone
+        album=The Very Best Of
+        songDetailUrl=https://www.pandora.com/artist/bob-dylan/the-very-best-of/like-a-rolling-stone/TRx
+        artistDetailUrl=https://www.pandora.com/artist/bob-dylan/AR9qX4JdgZPkZkq
+        albumDetailUrl=https://www.pandora.com/artist/bob-dylan/the-very-best-of/ALm2vgx4xxZ5qn2
+        """
+        guard case .songStart(let song) =
+                EventParser.parse(eventType: "songstart", payload: payload)
+        else { return XCTFail() }
+        XCTAssertEqual(song.detailURL?.absoluteString,
+                       "https://www.pandora.com/artist/bob-dylan/the-very-best-of/like-a-rolling-stone/TRx")
+        XCTAssertEqual(song.artistDetailURL?.absoluteString,
+                       "https://www.pandora.com/artist/bob-dylan/AR9qX4JdgZPkZkq")
+        XCTAssertEqual(song.albumDetailURL?.absoluteString,
+                       "https://www.pandora.com/artist/bob-dylan/the-very-best-of/ALm2vgx4xxZ5qn2")
     }
 
     func testParsesUserGetStations() throws {

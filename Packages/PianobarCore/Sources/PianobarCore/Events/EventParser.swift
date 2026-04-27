@@ -59,10 +59,21 @@ public enum EventParser {
             coverArtURL: kv["coverArt"].flatMap(httpsURL),
             durationSeconds: kv["songDuration"].flatMap(Int.init) ?? 0,
             rating: Rating(pianobarInt: kv["rating"].flatMap(Int.init) ?? 0),
-            detailURL: kv["detailUrl"].flatMap(URL.init),
+            detailURL: firstURL(in: kv, keys: ["detailUrl", "songDetailUrl", "titleUrl"]),
+            artistDetailURL: firstURL(in: kv, keys: ["artistDetailUrl", "artistUrl"]),
+            albumDetailURL: firstURL(in: kv, keys: ["albumDetailUrl", "albumUrl"]),
             stationName: kv["stationName"] ?? ""
         )
         return .songStart(song)
+    }
+
+    private static func firstURL(in kv: [String: String], keys: [String]) -> URL? {
+        for key in keys {
+            if let value = kv[key], let url = URL(string: value) {
+                return url
+            }
+        }
+        return nil
     }
 
     /// Pianobar emits Pandora CDN URLs as `http://`, which modern macOS

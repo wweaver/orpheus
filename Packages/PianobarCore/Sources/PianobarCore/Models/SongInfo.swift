@@ -8,6 +8,8 @@ public struct SongInfo: Equatable, Sendable {
     public var durationSeconds: Int
     public var rating: Rating
     public var detailURL: URL?
+    public var artistDetailURL: URL?
+    public var albumDetailURL: URL?
     public var stationName: String
 
     public init(
@@ -18,6 +20,8 @@ public struct SongInfo: Equatable, Sendable {
         durationSeconds: Int,
         rating: Rating,
         detailURL: URL?,
+        artistDetailURL: URL? = nil,
+        albumDetailURL: URL? = nil,
         stationName: String
     ) {
         self.title = title
@@ -27,6 +31,8 @@ public struct SongInfo: Equatable, Sendable {
         self.durationSeconds = durationSeconds
         self.rating = rating
         self.detailURL = detailURL
+        self.artistDetailURL = artistDetailURL
+        self.albumDetailURL = albumDetailURL
         self.stationName = stationName
     }
 }

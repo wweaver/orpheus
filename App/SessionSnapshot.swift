@@ -40,12 +40,15 @@ private struct WireSong: Codable {
     var durationSeconds: Int
     var rating: String      // Rating.rawValue
     var detailURL: URL?
+    var artistDetailURL: URL?
+    var albumDetailURL: URL?
     var stationName: String
 
     init(_ s: SongInfo) {
         title = s.title; artist = s.artist; album = s.album
         coverArtURL = s.coverArtURL; durationSeconds = s.durationSeconds
         rating = s.rating.rawValue; detailURL = s.detailURL
+        artistDetailURL = s.artistDetailURL; albumDetailURL = s.albumDetailURL
         stationName = s.stationName
     }
     var model: SongInfo {
@@ -53,7 +56,10 @@ private struct WireSong: Codable {
             title: title, artist: artist, album: album,
             coverArtURL: coverArtURL, durationSeconds: durationSeconds,
             rating: Rating(rawValue: rating) ?? .unrated,
-            detailURL: detailURL, stationName: stationName
+            detailURL: detailURL,
+            artistDetailURL: artistDetailURL,
+            albumDetailURL: albumDetailURL,
+            stationName: stationName
         )
     }
 }
