@@ -25,6 +25,10 @@ from a full now-playing card down to a small transport strip.
 
 <img src="docs/screenshots/compact.png" alt="Minimal window showing only the transport controls and progress bar" width="280">
 
+**Menu bar** — Now Playing title, quick actions, and the full station list one click away.
+
+<img src="docs/screenshots/menu-bar.png" alt="Menu bar dropdown showing Now Playing title, Show Stations, Show Preferences, Quit, and a scrollable station list" width="220">
+
 ## Install (personal use)
 
 ```bash
