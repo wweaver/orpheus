@@ -10,13 +10,20 @@ and an experimental pause-on-quit / resume-on-launch mode.
 
 ## Screenshots
 
-<p>
-  <img src="docs/screenshots/now-playing.png" alt="Now playing window showing album art, song title, artist, album, and transport controls" width="280">
-  &nbsp;
-  <img src="docs/screenshots/no-art.png" alt="Now playing window with album art hidden" width="280">
-  &nbsp;
-  <img src="docs/screenshots/compact.png" alt="Compact window with the sidebar collapsed showing only transport controls and progress" width="280">
-</p>
+The window progressively hides content as you shrink it, so it can sit anywhere
+from a full now-playing card down to a small transport strip.
+
+**Full** — album art, song, artist, album, transport, and progress.
+
+<img src="docs/screenshots/now-playing.png" alt="Full now-playing window with album art, song title, artist, album, transport controls, and progress" width="280">
+
+**Condensed** — art hides, metadata and controls remain.
+
+<img src="docs/screenshots/no-art.png" alt="Condensed window with album art hidden, showing song title, artist, album, transport, and progress" width="280">
+
+**Minimal** — just the transport row and progress bar.
+
+<img src="docs/screenshots/compact.png" alt="Minimal window showing only the transport controls and progress bar" width="280">
 
 ## Install (personal use)
 
