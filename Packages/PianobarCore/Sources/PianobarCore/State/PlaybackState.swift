@@ -13,6 +13,12 @@ public final class PlaybackState: ObservableObject {
     @Published public private(set) var errorBanner: String?
     @Published public private(set) var authFailure: String?
 
+    /// Auto-dismiss timeout for transient error banners. The banner sticks
+    /// until either pianobar reports a new song (we infer recovery) or this
+    /// many seconds elapse — whichever comes first.
+    private static let errorBannerTimeout: TimeInterval = 30
+
+    private var errorBannerSetAt: Date?
     private var consumeTask: Task<Void, Never>?
     private var ticker: Timer?
 
@@ -46,6 +52,11 @@ public final class PlaybackState: ObservableObject {
                               ?? currentStation
             progressSeconds = 0
             isPlaying = true
+            // A new song means pianobar recovered from whatever transient
+            // hiccup the banner was reporting. Don't clear authFailure
+            // here — that's a separate, sticky condition.
+            errorBanner = nil
+            errorBannerSetAt = nil
         case .songFinish:
             break // song will be appended when next songStart fires
         case .songLove:     currentSong?.rating = .loved
@@ -72,6 +83,7 @@ public final class PlaybackState: ObservableObject {
             authFailure = ok ? nil : (msg.isEmpty ? "Sign-in failed" : msg)
         case .pandoraError(_, let msg), .networkError(let msg):
             errorBanner = msg
+            errorBannerSetAt = Date()
         }
     }
 
@@ -95,16 +107,24 @@ public final class PlaybackState: ObservableObject {
 
     public func setErrorBanner(_ message: String) {
         errorBanner = message
+        errorBannerSetAt = Date()
     }
 
     public func dismissErrorBanner() {
         errorBanner = nil
+        errorBannerSetAt = nil
     }
 
     private func startTicker() {
         ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                guard let self, self.isPlaying,
+                guard let self else { return }
+                if let setAt = self.errorBannerSetAt,
+                   Date().timeIntervalSince(setAt) >= Self.errorBannerTimeout {
+                    self.errorBanner = nil
+                    self.errorBannerSetAt = nil
+                }
+                guard self.isPlaying,
                       let dur = self.currentSong?.durationSeconds,
                       self.progressSeconds < dur
                 else { return }

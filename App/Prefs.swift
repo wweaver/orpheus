@@ -15,6 +15,7 @@ enum Prefs {
         static let stationClickCount = "stationClickCount"     // Int (1 or 2)
         static let eventDebugLog     = "eventDebugLog"         // Bool
         static let keepPianobarAlive = "keepPianobarAlive"     // Bool (experimental)
+        static let pauseOnSleep      = "pauseOnSleep"          // Bool (auto-pause when display/system sleeps; never auto-resumes)
         static let wasPlayingOnQuit  = "wasPlayingOnQuit"      // Bool (internal, legacy)
         static let pianobarWasPaused = "pianobarWasPaused"     // Bool (internal — true only when our willTerminate explicitly paused pianobar)
     }
@@ -31,6 +32,7 @@ enum Prefs {
             Keys.stationClickCount: 2,
             Keys.eventDebugLog: false,
             Keys.keepPianobarAlive: false,
+            Keys.pauseOnSleep: true,
         ])
     }
 }

@@ -8,6 +8,16 @@ Menu-bar presence, Now Playing widget, media-key control, notifications,
 station list, thumbs / tired / bookmark, history, auto-resume of last station,
 and an experimental pause-on-quit / resume-on-launch mode.
 
+## Screenshots
+
+<p>
+  <img src="docs/screenshots/now-playing.png" alt="Now playing window showing album art, song title, artist, album, and transport controls" width="280">
+  &nbsp;
+  <img src="docs/screenshots/no-art.png" alt="Now playing window with album art hidden" width="280">
+  &nbsp;
+  <img src="docs/screenshots/compact.png" alt="Compact window with the sidebar collapsed showing only transport controls and progress" width="280">
+</p>
+
 ## Install (personal use)
 
 ```bash

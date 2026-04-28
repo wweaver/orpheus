@@ -21,6 +21,8 @@ final class AppBootstrap: ObservableObject {
     private var supervisorWatch: Task<Void, Never>?
     private var stationTracker: Task<Void, Never>?
     private var willTerminateObserver: NSObjectProtocol?
+    private var willSleepObserver: NSObjectProtocol?
+    private var screenLockedObserver: NSObjectProtocol?
     private var snapshotSubs = Set<AnyCancellable>()
     private var startInvoked: Bool = false
 
@@ -105,6 +107,47 @@ final class AppBootstrap: ObservableObject {
         }
     }
 
+    /// Hermes parity: pause pianobar when the Mac sleeps OR the screen is
+    /// locked, and stay paused on wake/unlock. The user has to press play to
+    /// resume, matching the original "doesn't resume on wake" behavior.
+    /// Gated by Prefs.Keys.pauseOnSleep.
+    private func installSleepHook() {
+        if let obs = willSleepObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(obs)
+        }
+        willSleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.willSleepNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.pauseForSystemEvent()
+            }
+        }
+
+        // Screen lock comes through DistributedNotificationCenter, not
+        // NSWorkspace. Fires for Cmd+Ctrl+Q, hot corners, and screensaver.
+        if let obs = screenLockedObserver {
+            DistributedNotificationCenter.default().removeObserver(obs)
+        }
+        screenLockedObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("com.apple.screenIsLocked"),
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.pauseForSystemEvent()
+            }
+        }
+    }
+
+    private func pauseForSystemEvent() {
+        guard UserDefaults.standard.bool(forKey: Prefs.Keys.pauseOnSleep),
+              let state = playbackState,
+              state.isPlaying
+        else { return }
+        Self.writeFifoSync("p\n", at: fifoPath)
+        state.setPlaying(false)
+    }
+
     private func handleWillTerminate() {
         guard UserDefaults.standard.bool(forKey: Prefs.Keys.keepPianobarAlive),
               let state = playbackState
@@ -161,6 +204,7 @@ final class AppBootstrap: ObservableObject {
         // choice.
         PianobarPIDRegistry.shared.setExitAction(keepAlive ? .keepAlive : .kill)
         installTerminationHook()
+        installSleepHook()
 
         // Fast path: an earlier session deliberately left pianobar running.
         // Reattach to it without rewriting config or spawning a new child.

@@ -8,6 +8,7 @@ struct StationsSidebarView: View {
     @State private var selection: String?
     @State private var addSheetPresented: Bool = false
     @State private var stationToDelete: Station?
+    @State private var stationToRename: Station?
     @State private var lastSwitchRequestID: String?
     @State private var lastSwitchRequestDate: Date = .distantPast
 
@@ -18,6 +19,7 @@ struct StationsSidebarView: View {
                     row(for: station)
                         .contextMenu {
                             Button("Start station") { switchTo(station) }
+                            Button("Rename station…") { stationToRename = station }
                             Divider()
                             Button(role: .destructive) {
                                 stationToDelete = station
@@ -70,6 +72,14 @@ struct StationsSidebarView: View {
                 Task { try? await ctrl.createStationFromSearch(query) }
             } onCancel: {
                 addSheetPresented = false
+            }
+        }
+        .sheet(item: $stationToRename) { station in
+            RenameStationSheet(originalName: station.name) { newName in
+                stationToRename = nil
+                rename(station, to: newName)
+            } onCancel: {
+                stationToRename = nil
             }
         }
         .confirmationDialog(
@@ -158,6 +168,23 @@ struct StationsSidebarView: View {
         }
     }
 
+    /// Pianobar's `r` renames the *currently playing* station, so for any
+    /// other station we switch first, settle briefly, then send the rename.
+    /// Mirrors the pattern used by `delete(_:)` below.
+    private func rename(_ station: Station, to newName: String) {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed != station.name else { return }
+        Task {
+            if state.currentStation?.id != station.id {
+                guard let idx = state.stations.firstIndex(where: { $0.id == station.id })
+                else { return }
+                try? await ctrl.switchStation(index: idx)
+                try? await Task.sleep(nanoseconds: 600_000_000)
+            }
+            try? await ctrl.renameStation(trimmed)
+        }
+    }
+
     /// Pianobar's `d` deletes the *currently playing* station, so to remove
     /// any other station we have to switch to it first, give pianobar a
     /// moment to settle, then send the delete.
@@ -204,6 +231,55 @@ private struct AddStationSheet: View {
     private func submit() {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        onSubmit(trimmed)
+    }
+}
+
+private struct RenameStationSheet: View {
+    let originalName: String
+    let onSubmit: (String) -> Void
+    let onCancel: () -> Void
+    @State private var name: String
+
+    init(originalName: String,
+         onSubmit: @escaping (String) -> Void,
+         onCancel: @escaping () -> Void) {
+        self.originalName = originalName
+        self.onSubmit = onSubmit
+        self.onCancel = onCancel
+        _name = State(initialValue: originalName)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Rename Station").font(.headline)
+            Text("Pianobar will briefly switch to this station to apply the rename.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            TextField("Station name", text: $name)
+                .textFieldStyle(.roundedBorder)
+                .onSubmit(submit)
+            HStack {
+                Spacer()
+                Button("Cancel", role: .cancel) { onCancel() }
+                    .keyboardShortcut(.cancelAction)
+                Button("Rename") { submit() }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(disabled)
+            }
+        }
+        .padding(20)
+        .frame(width: 360)
+    }
+
+    private var disabled: Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty || trimmed == originalName
+    }
+
+    private func submit() {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed != originalName else { return }
         onSubmit(trimmed)
     }
 }
