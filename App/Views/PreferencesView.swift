@@ -12,6 +12,7 @@ struct PreferencesView: View {
     @AppStorage(Prefs.Keys.stationClickCount) var stationClickCount: Int = 2
     @AppStorage(Prefs.Keys.eventDebugLog)     var eventDebugLog: Bool = false
     @AppStorage(Prefs.Keys.keepPianobarAlive) var keepPianobarAlive: Bool = false
+    @AppStorage(Prefs.Keys.pauseOnSleep)      var pauseOnSleep: Bool = true
 
     var body: some View {
         TabView {
@@ -34,6 +35,7 @@ struct PreferencesView: View {
                     Text("High").tag("high")
                 }
                 Toggle("Resume last station on launch", isOn: $autostartLastStation)
+                Toggle("Pause when computer sleeps or screen is locked", isOn: $pauseOnSleep)
                 Picker("Station click to switch", selection: $stationClickCount) {
                     Text("Single-click").tag(1)
                     Text("Double-click").tag(2)
