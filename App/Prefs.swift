@@ -12,7 +12,6 @@ enum Prefs {
         static let autostartLastStation = "autostartLastStation" // Bool
         static let lastStationName   = "lastStationName"       // String (station display name)
         static let lastStationId     = "lastStationId"         // legacy, kept for migration/cleanup
-        static let stationClickCount = "stationClickCount"     // Int (1 or 2)
         static let eventDebugLog     = "eventDebugLog"         // Bool
         static let keepPianobarAlive = "keepPianobarAlive"     // Bool (experimental)
         static let pauseOnSleep      = "pauseOnSleep"          // Bool (auto-pause when display/system sleeps; never auto-resumes)
@@ -29,7 +28,6 @@ enum Prefs {
             Keys.menuBarShowTitle: true,
             Keys.menuBarMaxWidth: 40,
             Keys.autostartLastStation: true,
-            Keys.stationClickCount: 2,
             Keys.eventDebugLog: false,
             Keys.keepPianobarAlive: false,
             Keys.pauseOnSleep: true,

@@ -9,7 +9,6 @@ struct PreferencesView: View {
     @AppStorage(Prefs.Keys.menuBarShowTitle)  var menuBarShowTitle: Bool = true
     @AppStorage(Prefs.Keys.menuBarMaxWidth)   var menuBarMaxWidth: Int = 40
     @AppStorage(Prefs.Keys.autostartLastStation) var autostartLastStation: Bool = true
-    @AppStorage(Prefs.Keys.stationClickCount) var stationClickCount: Int = 2
     @AppStorage(Prefs.Keys.eventDebugLog)     var eventDebugLog: Bool = false
     @AppStorage(Prefs.Keys.keepPianobarAlive) var keepPianobarAlive: Bool = false
     @AppStorage(Prefs.Keys.pauseOnSleep)      var pauseOnSleep: Bool = true
@@ -36,11 +35,6 @@ struct PreferencesView: View {
                 }
                 Toggle("Resume last station on launch", isOn: $autostartLastStation)
                 Toggle("Pause when computer sleeps or screen is locked", isOn: $pauseOnSleep)
-                Picker("Station click to switch", selection: $stationClickCount) {
-                    Text("Single-click").tag(1)
-                    Text("Double-click").tag(2)
-                }
-                .pickerStyle(.segmented)
             }
             .formStyle(.grouped)
         }
