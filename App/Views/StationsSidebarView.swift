@@ -1,16 +1,18 @@
+import AppKit
 import SwiftUI
 import PianobarCore
 
 struct StationsSidebarView: View {
     @ObservedObject var state: PlaybackState
     let ctrl: PianobarCtrl
-    @AppStorage(Prefs.Keys.stationClickCount) private var stationClickCount: Int = 2
     @State private var selection: String?
     @State private var addSheetPresented: Bool = false
     @State private var stationToDelete: Station?
     @State private var stationToRename: Station?
     @State private var lastSwitchRequestID: String?
     @State private var lastSwitchRequestDate: Date = .distantPast
+    @State private var lastClickedID: String?
+    @State private var lastClickedAt: Date = .distantPast
 
     var body: some View {
         VStack(spacing: 0) {
@@ -102,37 +104,47 @@ struct StationsSidebarView: View {
         }
     }
 
-    /// Pure-Text row. Style changes only — no nested HStack, no Image with
-    /// conditional opacity. macOS 26.4.1's List selection binding has been
-    /// flaky whenever rows contain anything beyond a single Text.
-    private func rowText(for station: Station) -> some View {
+    /// Stable view tree: the speaker icon is always rendered and toggled via
+    /// opacity so the row's identity never changes. macOS 26.4.1's
+    /// `List(selection:)` is flaky when rows insert/remove subviews on
+    /// selection changes; opacity-only toggles avoid that.
+    private func rowContent(for station: Station) -> some View {
         let isCurrent = state.currentStation?.id == station.id
-        return Text(station.name)
-            .fontWeight(isCurrent ? .semibold : .regular)
-            .foregroundStyle(isCurrent ? Color.accentColor : Color.primary)
+        return HStack(spacing: 6) {
+            Image(systemName: "speaker.wave.2.fill")
+                .font(.caption)
+                .foregroundStyle(Color.accentColor)
+                .opacity(isCurrent ? 1 : 0)
+                .frame(width: 14)
+                .accessibilityHidden(true)
+            Text(station.name)
+                .fontWeight(isCurrent ? .semibold : .regular)
+        }
     }
 
-    @ViewBuilder
     private func row(for station: Station) -> some View {
-        let base = rowText(for: station)
+        rowContent(for: station)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .tag(station.id)
+            .onTapGesture { handleTap(on: station) }
+    }
 
-        if stationClickCount == 1 {
-            base.onTapGesture {
-                select(station)
-                switchTo(station)
-            }
+    // A single `onTapGesture` avoids the double-click disambiguation delay
+    // a `count: 2` recognizer introduces. Selection is set on every click so
+    // the row highlights instantly; double-clicks are detected by comparing
+    // the timestamp of the previous click on the same row.
+    private func handleTap(on station: Station) {
+        selection = station.id
+        let now = Date()
+        let isDoubleClick = lastClickedID == station.id
+            && now.timeIntervalSince(lastClickedAt) < NSEvent.doubleClickInterval
+        if isDoubleClick {
+            lastClickedID = nil
+            switchTo(station)
         } else {
-            base
-                .onTapGesture {
-                    select(station)
-                }
-                .onTapGesture(count: 2) {
-                    select(station)
-                    switchTo(station)
-                }
+            lastClickedID = station.id
+            lastClickedAt = now
         }
     }
 
@@ -141,10 +153,6 @@ struct StationsSidebarView: View {
               let station = state.stations.first(where: { $0.id == id })
         else { return }
         switchTo(station)
-    }
-
-    private func select(_ station: Station) {
-        selection = station.id
     }
 
     private func switchTo(_ station: Station) {
