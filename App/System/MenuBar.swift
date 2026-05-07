@@ -63,11 +63,12 @@ struct MenuBarContent: View {
                 openSettings: openSettings
             )
         } else {
-            Button("Starting…") {}.disabled(true)
-            Divider()
             Button("Show Orpheus") { MenuBarActions.showMainWindow(openWindow: openWindow) }
             Button("Preferences…") { MenuBarActions.openSettings(openSettings: openSettings) }
                 .keyboardShortcut(",")
+            Divider()
+            Button("Starting…") {}.disabled(true)
+            Divider()
             Button("Quit Orpheus") { NSApp.terminate(nil) }
                 .keyboardShortcut("q")
         }
@@ -81,6 +82,12 @@ private struct MenuBarCommands: View {
     let openSettings: OpenSettingsAction
 
     var body: some View {
+        Button("Show Orpheus") { MenuBarActions.showMainWindow(openWindow: openWindow) }
+        Button("Preferences…") { MenuBarActions.openSettings(openSettings: openSettings) }
+            .keyboardShortcut(",")
+
+        Divider()
+
         Button(state.isPlaying ? "Pause" : "Play") {
             Task { try? await ctrl.togglePlay(); state.setPlaying(!state.isPlaying) }
         }
@@ -123,9 +130,6 @@ private struct MenuBarCommands: View {
 
         Divider()
 
-        Button("Show Orpheus") { MenuBarActions.showMainWindow(openWindow: openWindow) }
-        Button("Preferences…") { MenuBarActions.openSettings(openSettings: openSettings) }
-            .keyboardShortcut(",")
         Button("Quit Orpheus") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
     }
