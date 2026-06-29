@@ -195,6 +195,10 @@ final class AppBootstrap: ObservableObject {
 
     private func launch(email: String, password: String) async {
         startupError = nil
+        // Tear down any integrations from a prior launch (e.g. retryPlayback)
+        // before creating new ones, so we don't leak the old GlobalHotkeys
+        // instance and its registered Carbon event handler.
+        clearPlaybackIntegrations()
         try? FileManager.default.createDirectory(at: appSupportDir, withIntermediateDirectories: true)
         try? FileManager.default.createDirectory(at: configDir, withIntermediateDirectories: true)
 
@@ -233,10 +237,18 @@ final class AppBootstrap: ObservableObject {
         let audioQuality = ConfigManager.AudioQuality(
             rawValue: UserDefaults.standard.string(forKey: Prefs.Keys.audioQuality) ?? "high"
         ) ?? .high
-        try? ConfigManager(configDir: configDir).writeConfig(
-            email: email, password: password, audioQuality: audioQuality,
-            eventBridgePath: eventBridgePath, fifoPath: fifoPath,
-            autostartStationId: nil)
+        do {
+            try ConfigManager(configDir: configDir).writeConfig(
+                email: email, password: password, audioQuality: audioQuality,
+                eventBridgePath: eventBridgePath, fifoPath: fifoPath,
+                autostartStationId: nil)
+        } catch ConfigManager.Error.invalidCredentials {
+            startupError = "Your Pandora email or password contains an unsupported character (such as a line break). Sign out and re-enter your credentials."
+            return
+        } catch {
+            startupError = "Couldn't write pianobar configuration: \(error.localizedDescription)"
+            return
+        }
         // Clean up any legacy id we previously wrote — it was just the list
         // index and never actually worked for auto-resume.
         UserDefaults.standard.removeObject(forKey: Prefs.Keys.lastStationId)
@@ -294,6 +306,10 @@ final class AppBootstrap: ObservableObject {
     /// there's no supervisor; commands still flow via the FIFO and events via
     /// a freshly-bound socket at the same path.
     private func attachToRunning(pid: pid_t) async {
+        // Tear down any integrations from a prior launch before creating new
+        // ones, so the old GlobalHotkeys instance and its Carbon event handler
+        // don't leak.
+        clearPlaybackIntegrations()
         // Re-create the event socket at the same path — event_bridge.sh will
         // connect there on pianobar's next event. The FIFO lives on disk and
         // still has pianobar as reader, so we just open the writer end.

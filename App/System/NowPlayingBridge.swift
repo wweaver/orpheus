@@ -70,9 +70,9 @@ final class NowPlayingBridge {
     }
 
     private func setPlayback(_ shouldPlay: Bool) async {
-        guard state.isPlaying != shouldPlay else { return }
-        try? await ctrl.togglePlay()
-        state.setPlaying(shouldPlay)
+        // Delegate to the shared, race-free transport helper so the media-key
+        // path stays in sync with the in-app transport controls.
+        await state.setPlayback(shouldPlay, via: ctrl)
     }
 
     private func observeState() {

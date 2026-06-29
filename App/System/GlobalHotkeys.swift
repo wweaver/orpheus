@@ -115,8 +115,8 @@ final class GlobalHotkeys {
             guard let self else { return }
             switch action {
             case .playPause:
-                try? await self.ctrl.togglePlay()
-                self.state.setPlaying(!self.state.isPlaying)
+                let target = !self.state.isPlaying
+                await self.state.setPlayback(target, via: self.ctrl)
             case .next: try? await self.ctrl.next()
             case .love: try? await self.ctrl.love()
             case .ban:  try? await self.ctrl.ban()
