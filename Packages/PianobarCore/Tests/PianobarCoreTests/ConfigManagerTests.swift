@@ -70,4 +70,29 @@ final class ConfigManagerTests: XCTestCase {
         let contents = try String(contentsOf: tmp.appendingPathComponent("config"))
         XCTAssertFalse(contents.contains("autostart_station"))
     }
+
+    func testRejectsNewlineInPassword() {
+        let mgr = ConfigManager(configDir: tmp)
+        XCTAssertThrowsError(
+            try mgr.writeConfig(email: "a@b.com", password: "pass\nword = injected",
+                                audioQuality: .high,
+                                eventBridgePath: "/tmp/x", fifoPath: "/tmp/y")
+        ) { error in
+            XCTAssertEqual(error as? ConfigManager.Error, .invalidCredentials)
+        }
+        XCTAssertFalse(
+            FileManager.default.fileExists(atPath: tmp.appendingPathComponent("config").path),
+            "No config should be written when a credential is rejected")
+    }
+
+    func testRejectsNewlineInEmail() {
+        let mgr = ConfigManager(configDir: tmp)
+        XCTAssertThrowsError(
+            try mgr.writeConfig(email: "a@b.com\nfifo = /tmp/evil", password: "p",
+                                audioQuality: .high,
+                                eventBridgePath: "/tmp/x", fifoPath: "/tmp/y")
+        ) { error in
+            XCTAssertEqual(error as? ConfigManager.Error, .invalidCredentials)
+        }
+    }
 }

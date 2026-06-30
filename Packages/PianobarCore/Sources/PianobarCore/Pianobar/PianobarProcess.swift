@@ -167,7 +167,7 @@ public actor PianobarProcess {
             env["PIANOBAR_GUI_EVENT_LOG"] = url.path
         }
         p.environment = env
-        p.standardInput = FileHandle(forReadingAtPath: "/dev/null")
+        p.standardInput = FileHandle.nullDevice
         let logHandle: FileHandle
         if let url = logFileURL {
             try? FileManager.default.createDirectory(
@@ -175,11 +175,10 @@ public actor PianobarProcess {
             if !FileManager.default.fileExists(atPath: url.path) {
                 FileManager.default.createFile(atPath: url.path, contents: nil)
             }
-            logHandle = (try? FileHandle(forWritingTo: url))
-                ?? FileHandle(forWritingAtPath: "/dev/null")!
+            logHandle = (try? FileHandle(forWritingTo: url)) ?? .nullDevice
             logHandle.seekToEndOfFile()
         } else {
-            logHandle = FileHandle(forWritingAtPath: "/dev/null")!
+            logHandle = .nullDevice
         }
         p.standardOutput = logHandle
         p.standardError = logHandle

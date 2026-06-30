@@ -41,7 +41,8 @@ struct NowPlayingView: View {
 
                 HStack(spacing: 8) {
                     transportButton(systemName: state.isPlaying ? "pause.fill" : "play.fill") {
-                        Task { try? await ctrl.togglePlay(); state.setPlaying(!state.isPlaying) }
+                        let target = !state.isPlaying
+                        Task { await state.setPlayback(target, via: ctrl) }
                     }
                     transportButton(systemName: "forward.fill") {
                         Task { try? await ctrl.next() }
@@ -108,7 +109,7 @@ struct NowPlayingView: View {
                     total: Double(song.durationSeconds)
                 )
                 HStack {
-                    Text(format(state.progressSeconds))
+                    Text(format(min(state.progressSeconds, song.durationSeconds)))
                     Spacer()
                     Text(format(song.durationSeconds))
                 }

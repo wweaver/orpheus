@@ -13,8 +13,18 @@ public actor PianobarCtrl {
         self.fifoPath = fifoPath
     }
 
+    // pianobar's `p` is a single play/pause *toggle*; there is no separate
+    // play or pause command, so all three map to the same write.
+    //
+    // Known pianobar limitation (intentionally not worked around): while
+    // paused, pianobar stops reading the Pandora audio stream. After a pause
+    // longer than its ~15–30s audio buffer, the CDN connection goes idle and is
+    // dropped (and/or the signed URL expires). On resume pianobar plays out the
+    // buffered tail, hits EOF, treats it as end-of-track, and advances to the
+    // next song. pianobar exposes no way to re-fetch the current song, so we
+    // rely on its buffer and accept this — short pauses resume normally.
     public func play()          async throws { try write("p\n") }
-    public func pause()         async throws { try write("p\n") } // pianobar toggles
+    public func pause()         async throws { try write("p\n") }
     public func togglePlay()    async throws { try write("p\n") }
     public func next()          async throws { try write("n\n") }
     public func love()          async throws { try write("+\n") }

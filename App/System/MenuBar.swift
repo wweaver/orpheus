@@ -89,7 +89,8 @@ private struct MenuBarCommands: View {
         Divider()
 
         Button(state.isPlaying ? "Pause" : "Play") {
-            Task { try? await ctrl.togglePlay(); state.setPlaying(!state.isPlaying) }
+            let target = !state.isPlaying
+            Task { await state.setPlayback(target, via: ctrl) }
         }
         .keyboardShortcut("p")
 
