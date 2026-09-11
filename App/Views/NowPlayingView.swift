@@ -6,99 +6,64 @@ struct NowPlayingView: View {
     @Environment(\.openURL) private var openURL
     @ObservedObject var state: PlaybackState
     let ctrl: PianobarCtrl
-    var windowSize: CGSize = .zero
+    /// Space this view actually has, i.e. the window minus the sidebar and the
+    /// history drawer. Sizing against the raw window size is what let the
+    /// volume slider slide under the drawer.
+    var availableSize: CGSize = .zero
     /// False when the current output device exposes no settable main volume
     /// (some aggregate and HDMI devices), so we hide the slider rather than
     /// show a dead control.
     @State private var volumeAvailable: Bool = false
 
     private var showArt: Bool {
-        windowSize.height >= 430
+        availableSize.height >= 430
     }
     private var showHeader: Bool {
-        windowSize.height >= 190
+        availableSize.height >= 190
     }
-    /// Art grows with the window now that the window itself isn't capped,
-    /// while leaving room for the metadata, transport and progress below it.
-    private var artMaxWidth: CGFloat {
-        let byWidth = windowSize.width - 48
-        let byHeight = windowSize.height - 260
-        return max(120, min(min(byWidth, byHeight), 420))
-    }
-
     /// Same progressive-disclosure idea as the art and header: the volume
     /// slider is the first thing to go when the window gets short.
     private var showVolume: Bool {
-        windowSize.height >= 330 && volumeAvailable
+        availableSize.height >= 300 && volumeAvailable
+    }
+
+    /// Vertical space the pinned controls need, so the art can claim the rest
+    /// without pushing them off.
+    private var controlsHeight: CGFloat {
+        34 /* transport */ + 34 /* progress */ + (showVolume ? 30 : 0) + 34 /* padding + spacing */
+    }
+
+    /// Art grows with the window now that the window itself isn't capped,
+    /// while leaving room for the metadata and the pinned controls below it.
+    private var artMaxWidth: CGFloat {
+        let byWidth = availableSize.width - 48
+        let byHeight = availableSize.height - controlsHeight - 96 /* metadata block */
+        return max(120, min(min(byWidth, byHeight), 420))
     }
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 12) {
-                if showArt {
-                    albumArt
-                        .aspectRatio(1, contentMode: .fit)
-                        .frame(maxWidth: artMaxWidth)
-                }
-
-                if showHeader {
-                    if let song = state.currentSong {
-                        songTitle(song)
-                        artistButton(song)
-                        Link(song.album, destination: song.albumDetailURL ?? pandoraAlbumURL(for: song))
-                            .font(.caption)
-                            .buttonStyle(.plain)
-                            .foregroundStyle(.tertiary)
-                            .lineLimit(1)
-                            .help("Open album on Pandora")
-                    } else {
-                        Text("Not playing").foregroundStyle(.secondary)
+        // Two sections: art and metadata flex and can scroll, the controls are
+        // pinned. Previously everything shared one ScrollView, so as the window
+        // got shorter the last item — the volume slider — was simply clipped
+        // behind the history drawer.
+        VStack(spacing: 0) {
+            if showArt || showHeader {
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 12) {
+                        if showArt {
+                            albumArt
+                                .aspectRatio(1, contentMode: .fit)
+                                .frame(maxWidth: artMaxWidth)
+                        }
+                        if showHeader { metadata }
                     }
-                    stationLine
-                }
-
-                HStack(spacing: 8) {
-                    transportButton(
-                        systemName: state.isPlaying ? "pause.fill" : "play.fill",
-                        label: state.isPlaying ? "Pause" : "Play"
-                    ) {
-                        let target = !state.isPlaying
-                        Task { await state.setPlayback(target, via: ctrl) }
-                    }
-                    transportButton(systemName: "forward.fill", label: "Next song") {
-                        Task { try? await ctrl.next() }
-                    }
-                    // Filled + tinted once the song is rated, so the user can
-                    // tell whether they already voted on it.
-                    transportButton(
-                        systemName: rating == .banned ? "hand.thumbsdown.fill" : "hand.thumbsdown",
-                        label: "Thumbs down",
-                        isOn: rating == .banned,
-                        tint: .red
-                    ) {
-                        Task { try? await ctrl.ban() }
-                    }
-                    transportButton(
-                        systemName: rating == .loved ? "hand.thumbsup.fill" : "hand.thumbsup",
-                        label: "Thumbs up",
-                        isOn: rating == .loved,
-                        tint: .green
-                    ) {
-                        Task { try? await ctrl.love() }
-                    }
-                    overflowMenu
-                }
-
-                progressBar
-
-                if showVolume {
-                    volumeSlider
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .frame(maxWidth: .infinity)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 16)
-            .frame(maxWidth: .infinity)
+
+            controls
         }
         .onAppear {
             // Seed from the actual device so the slider doesn't start at a
@@ -109,6 +74,75 @@ struct NowPlayingView: View {
             } else {
                 volumeAvailable = false
             }
+        }
+    }
+
+    /// Title / artist / album / station read as one block, so they get tight
+    /// spacing; the 12pt gap belongs *between* groups, not between every line
+    /// of the same one.
+    @ViewBuilder
+    private var metadata: some View {
+        VStack(spacing: 2) {
+            if let song = state.currentSong {
+                songTitle(song)
+                artistButton(song)
+                Link(song.album, destination: song.albumDetailURL ?? pandoraAlbumURL(for: song))
+                    .font(.caption)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                    .help("Open album on Pandora")
+            } else {
+                Text("Not playing").foregroundStyle(.secondary)
+            }
+            stationLine
+                .padding(.top, 3)
+        }
+    }
+
+    private var controls: some View {
+        VStack(spacing: 10) {
+            transportRow
+            progressBar
+            if showVolume { volumeSlider }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, showArt || showHeader ? 12 : 10)
+        .padding(.bottom, 12)
+        .frame(maxWidth: .infinity)
+    }
+
+    private var transportRow: some View {
+        HStack(spacing: 8) {
+            transportButton(
+                systemName: state.isPlaying ? "pause.fill" : "play.fill",
+                label: state.isPlaying ? "Pause" : "Play"
+            ) {
+                let target = !state.isPlaying
+                Task { await state.setPlayback(target, via: ctrl) }
+            }
+            transportButton(systemName: "forward.fill", label: "Next song") {
+                Task { try? await ctrl.next() }
+            }
+            // Filled + tinted once the song is rated, so the user can tell
+            // whether they already voted on it.
+            transportButton(
+                systemName: rating == .banned ? "hand.thumbsdown.fill" : "hand.thumbsdown",
+                label: "Thumbs down",
+                isOn: rating == .banned,
+                tint: .red
+            ) {
+                Task { try? await ctrl.ban() }
+            }
+            transportButton(
+                systemName: rating == .loved ? "hand.thumbsup.fill" : "hand.thumbsup",
+                label: "Thumbs up",
+                isOn: rating == .loved,
+                tint: .green
+            ) {
+                Task { try? await ctrl.love() }
+            }
+            overflowMenu
         }
     }
 
@@ -188,7 +222,6 @@ struct NowPlayingView: View {
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
         }
-        .padding(.horizontal, 12)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Volume")
         .accessibilityValue("\(state.volume) percent")
@@ -264,7 +297,6 @@ struct NowPlayingView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 12)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Playback progress")
             .accessibilityValue(

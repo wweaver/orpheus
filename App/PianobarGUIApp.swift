@@ -23,15 +23,23 @@ struct PianobarGUIApp: App {
             RootView()
                 .environmentObject(bootstrap)
                 .task { await bootstrap.start() }
-                // No upper bound: the previous 780x560 cap meant people on
-                // large displays couldn't make the player any bigger. The
-                // layout already adapts by progressively hiding content as the
-                // window shrinks, so only the minimum needs pinning.
-                .frame(minWidth: 320, idealWidth: 560,
-                       minHeight: 120, idealHeight: 560)
+                // Only a minimum. No upper bound, because the previous
+                // 780x560 cap stopped anyone on a large display making the
+                // player bigger; and no ideal, because `defaultSize` below
+                // decides the opening size.
+                .frame(minWidth: 320, minHeight: 120)
         }
-        .windowResizability(.contentSize)
-        .defaultSize(width: 560, height: 560)
+        // `.contentMinSize`, not `.contentSize`. With `.contentSize` the window
+        // is pinned to whatever size the content reports, and the player's
+        // scrollable region is happy to be tiny — so the window opened as a
+        // bare transport strip instead of showing the song. This honors the
+        // minimum above while letting `defaultSize` set the opening frame and
+        // the user resize freely from there.
+        .windowResizability(.contentMinSize)
+        // Tall enough to show album art, metadata, transport, progress, volume
+        // and the history drawer at once; narrow, because the player reads
+        // better as a column than a wide box.
+        .defaultSize(width: 380, height: 660)
         .commands { PlaybackCommands(bootstrap: bootstrap) }
 
         Settings {

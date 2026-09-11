@@ -19,6 +19,7 @@
 		6C6594AF6B1288212D035626 /* PlaybackTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7839798FA6C9B3317F3BCE13 /* PlaybackTransport.swift */; };
 		9043EC6B5D2ED6FA44E223DC /* MenuBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B27A33793EFCD536E4CE7D1 /* MenuBar.swift */; };
 		A0AA32140B4EE7C02AC47234 /* MainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CAC15D89B673192722274EC /* MainWindowView.swift */; };
+		A9AE47A56D923CC74F9A5EF7 /* WindowAccessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBF897FE03C560104738012C /* WindowAccessor.swift */; };
 		AB1624630F58CEC1DD5F0586 /* HotkeyRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF400929F736279A9E5F98B9 /* HotkeyRecorder.swift */; };
 		BDEA039AC61C621EB3FCDD71 /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F131B6A830377123C387B091 /* PreferencesView.swift */; };
 		CBD9D95156CCB97E7067DE26 /* PlaybackCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C07280115783998B20AB18B /* PlaybackCommands.swift */; };
@@ -44,6 +45,7 @@
 		94F3B7C1C3C3828388DC53DB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9CAC15D89B673192722274EC /* MainWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowView.swift; sourceTree = "<group>"; };
 		B2210E62872345F44D14C42F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		BBF897FE03C560104738012C /* WindowAccessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowAccessor.swift; sourceTree = "<group>"; };
 		C12322653DF30954F37F01AF /* AppBootstrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBootstrap.swift; sourceTree = "<group>"; };
 		CDF6D2FDA80F91D75A970C43 /* SessionSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSnapshot.swift; sourceTree = "<group>"; };
 		CF400929F736279A9E5F98B9 /* HotkeyRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyRecorder.swift; sourceTree = "<group>"; };
@@ -144,6 +146,7 @@
 				1BC5936206EFA2AD9926CC64 /* NowPlayingView.swift */,
 				F131B6A830377123C387B091 /* PreferencesView.swift */,
 				E86A9EEEF6B2F335456AAA1A /* StationsSidebarView.swift */,
+				BBF897FE03C560104738012C /* WindowAccessor.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -244,6 +247,7 @@
 				563F4A76E47351576496291A /* SessionSnapshot.swift in Sources */,
 				F4E702972F0693C68B0B6784 /* StationsSidebarView.swift in Sources */,
 				658AEB12A888379C64342287 /* SystemVolume.swift in Sources */,
+				A9AE47A56D923CC74F9A5EF7 /* WindowAccessor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
