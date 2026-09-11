@@ -16,6 +16,9 @@ public enum PianobarEvent: Equatable, Sendable {
     /// trying to reconstruct per-mutation deltas from a payload that doesn't
     /// identify which station changed.
     case stationsChanged([Station])
+    /// A station was deleted. Carries no list: see EventParser for why the
+    /// payload's station list can't be trusted for this event.
+    case stationDeleted
     case userLogin(LoginResult)
     case pandoraError(code: Int, message: String)
     case networkError(message: String)

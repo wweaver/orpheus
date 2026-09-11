@@ -59,11 +59,20 @@ public enum EventParser {
         // authoritative list. Replacing wholesale keeps the sidebar in step and
         // — since station commands address stations by array index — keeps
         // those indices aligned with pianobar's own ordering.
-        case "usergetstations", "stationcreate", "stationdelete",
+        case "usergetstations", "stationcreate",
              "stationrename", "stationaddmusic", "stationaddgenre",
              "stationquickmixtoggle":
             let list = stations(from: kv)
             return list.isEmpty ? nil : .stationsChanged(list)
+
+        case "stationdelete":
+            // Deliberately does NOT publish the list embedded in this payload.
+            // pianobar builds the event from its station list as it stands when
+            // the event fires, which for a delete still contains the station
+            // being removed — so applying it put the station straight back in
+            // the sidebar. The app removes the station it asked to delete
+            // instead, and the next `usergetstations` reconciles.
+            return .stationDeleted
         default:
             return nil
         }

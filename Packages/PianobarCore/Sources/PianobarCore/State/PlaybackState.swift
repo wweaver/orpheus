@@ -76,6 +76,9 @@ public final class PlaybackState: ObservableObject {
         case .songBookmark, .artistBookmark: break
         case .stationFetchPlaylist:
             isBuffering = true
+        case .stationDeleted:
+            // Handled by the caller via removeStation(id:); see above.
+            break
         case .stationsChanged(let s):
             // Pianobar occasionally emits an empty stations list during
             // transient errors (network blip, expired session being refreshed,
@@ -126,6 +129,18 @@ public final class PlaybackState: ObservableObject {
     }
 
     public func setPlaying(_ playing: Bool) { isPlaying = playing }
+
+    /// Drop a station the app has just deleted.
+    ///
+    /// pianobar's `stationdelete` event carries its station list as it stood
+    /// when the event fired, which still includes the station being removed, so
+    /// the list can't be used to learn about the deletion. The caller knows
+    /// what it deleted; this keeps the sidebar and pianobar's own indices in
+    /// step until the next `usergetstations` reconciles.
+    public func removeStation(id: String) {
+        stations.removeAll { $0.id == id }
+        if currentStation?.id == id { currentStation = nil }
+    }
 
     /// Pre-populate state from a snapshot taken by a prior app session so the
     /// UI isn't blank while we wait for pianobar's next event.

@@ -91,7 +91,7 @@ final class EventParserResultCodeTests: XCTestCase {
         pRet=1
         wRet=0
         """
-        for eventType in ["stationcreate", "stationdelete", "stationrename",
+        for eventType in ["stationcreate", "stationrename",
                           "stationaddmusic", "usergetstations"] {
             guard case .stationsChanged(let stations) =
                     EventParser.parse(eventType: eventType, payload: payload)
@@ -101,8 +101,25 @@ final class EventParserResultCodeTests: XCTestCase {
         }
     }
 
+    /// pianobar builds the event payload from its station list as it stands
+    /// when the event fires, which for a delete still contains the station
+    /// being removed. Publishing it put the deleted station straight back into
+    /// the sidebar, so this event deliberately carries no list.
+    func testStationDeleteDoesNotRepublishAStaleList() {
+        let payload = """
+        station0=Radio A
+        station1=Doomed Radio
+        station2=Radio B
+        pRet=1
+        wRet=0
+        """
+        XCTAssertEqual(
+            EventParser.parse(eventType: "stationdelete", payload: payload),
+            .stationDeleted)
+    }
+
     func testStationEventWithoutAListIsIgnored() {
         // Don't publish an empty list and blank the sidebar.
-        XCTAssertNil(EventParser.parse(eventType: "stationdelete", payload: "pRet=1\nwRet=0"))
+        XCTAssertNil(EventParser.parse(eventType: "stationcreate", payload: "pRet=1\nwRet=0"))
     }
 }

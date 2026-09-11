@@ -252,12 +252,33 @@ struct StationsSidebarView: View {
 
     /// Pianobar's `d` deletes the *currently playing* station, so to remove
     /// any other station we have to switch to it first.
+    ///
+    /// Deleting whatever is playing leaves pianobar at a `Select station:`
+    /// prompt waiting for a replacement, and that prompt takes a **bare**
+    /// index — the `s` of the usual `s<N>` command is literal text there. We
+    /// previously sent `s<N>`, which the prompt rejected and then re-asked,
+    /// leaving pianobar parked forever and silently eating every later
+    /// command. Answering is mandatory, not optional: there is no path where
+    /// we can skip it.
     private func delete(_ station: Station) {
         Task {
             let resumeTo = stationToResumeAfterActing(on: station)
             guard await makeCurrent(station, action: "delete") else { return }
             try? await ctrl.deleteStation()
-            await resume(resumeTo)
+
+            // Indices at the prompt are against pianobar's list *after* the
+            // delete. Our copy still has the station (its event payload can't
+            // be trusted — see EventParser), so drop it to get the same view.
+            // Deliberately index-based rather than filtering by name: the
+            // prompt's filter is a substring match, and names like
+            // "Christmas Radio" / "My Christmas Radio" would match two
+            // stations and leave the prompt unanswered again.
+            let remaining = state.stations.filter { $0.id != station.id }
+            let target = remaining.firstIndex { $0.name == resumeTo } ?? remaining.indices.first
+            if let target {
+                try? await ctrl.selectStationAtPrompt(index: target)
+            }
+            state.removeStation(id: station.id)
         }
     }
 
