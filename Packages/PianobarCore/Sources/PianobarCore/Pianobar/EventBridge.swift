@@ -26,6 +26,14 @@ public final class EventBridge: @unchecked Sendable {
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
         let sunPathSize = MemoryLayout.size(ofValue: addr.sun_path)
+        // `sun_path` is only 104 bytes. Silently truncating it would make us
+        // bind one path while pianobar is told to connect to another, so the
+        // app would receive zero events with no error anywhere.
+        guard socketPath.utf8.count < sunPathSize else {
+            close(listenFD); listenFD = -1
+            throw Error.socketFailed(
+                "socket path too long (\(socketPath.utf8.count) bytes, max \(sunPathSize - 1)): \(socketPath)")
+        }
         _ = socketPath.withCString { src in
             withUnsafeMutablePointer(to: &addr.sun_path) {
                 $0.withMemoryRebound(to: CChar.self, capacity: sunPathSize) {
@@ -56,16 +64,37 @@ public final class EventBridge: @unchecked Sendable {
         continuation.finish()
     }
 
+    /// Give up on a client that connects but never sends a terminated record.
+    private static let clientReadTimeout = timeval(tv_sec: 5, tv_usec: 0)
+    /// Hard cap on one event payload. Real pianobar events are a few hundred
+    /// bytes; anything approaching this is a malfunctioning or hostile client.
+    private static let maxPayloadBytes = 1 << 20  // 1 MiB
+
     private func acceptLoop() async {
         while !Task.isCancelled {
             let fd = accept(listenFD, nil, nil)
-            if fd < 0 { continue }
+            if fd < 0 {
+                // The listening socket is gone (stop() closed it) or accept
+                // failed hard. Returning beats spinning at 100% CPU on a
+                // permanently failing accept.
+                if errno == EINTR || errno == ECONNABORTED { continue }
+                return
+            }
+            // Handled inline, on purpose: pianobar opens one connection per
+            // event and their order is meaningful (e.g. songfinish before
+            // songstart), so concurrent handling could reorder them. The
+            // unbounded stall this used to risk is addressed by the receive
+            // timeout in handleClient rather than by parallelism.
             handleClient(fd: fd)
         }
     }
 
     private func handleClient(fd: Int32) {
         defer { close(fd) }
+        // Without a receive timeout, a client that connects and never sends the
+        // terminator holds this read forever.
+        var timeout = Self.clientReadTimeout
+        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
         var buf = Data()
         var tmp = [UInt8](repeating: 0, count: 4096)
         while true {
@@ -73,6 +102,9 @@ public final class EventBridge: @unchecked Sendable {
             if n <= 0 { break }
             buf.append(tmp, count: n)
             if buf.last == 0x1e { break } // record separator
+            // Bound the buffer so a client that streams without ever sending a
+            // terminator can't exhaust memory.
+            if buf.count > Self.maxPayloadBytes { return }
         }
         // Strip trailing separator, split first line from payload.
         if buf.last == 0x1e { buf.removeLast() }

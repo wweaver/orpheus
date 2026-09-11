@@ -44,6 +44,21 @@ public final class PianobarPIDRegistry: @unchecked Sendable {
     }
 }
 
+/// One-shot atomic latch. `claim()` returns true exactly once, no matter how
+/// many threads race it — used to guarantee a `CheckedContinuation` is resumed
+/// by only one of two competing callbacks.
+final class ResumeLatch: @unchecked Sendable {
+    private let lock = NSLock()
+    private var claimed = false
+
+    func claim() -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        if claimed { return false }
+        claimed = true
+        return true
+    }
+}
+
 /// Lightweight pidfile helper. Writes and reads a single integer pid at a
 /// caller-chosen path. Used to let a later app launch discover a pianobar
 /// that was deliberately left running (see `Prefs.Keys.keepPianobarAlive`).
@@ -113,11 +128,23 @@ public actor PianobarProcess {
     }
 
     public func start() async throws {
-        if state == .running { return }
+        // `state` only becomes .running inside the supervisor task, so checking
+        // it alone lets two start() calls made before the first task is
+        // scheduled both pass — the second would overwrite `supervisorTask` and
+        // leave the first as an orphan spawning its own pianobar. Gate on the
+        // task handle instead.
+        if supervisorTask != nil || state == .running { return }
         shouldStopSupervising = false
         supervisorTask = Task {
             await self.superviseLoop()
+            // Loop ended (gave up, or stop() asked it to). Release the handle so
+            // a later start() on this instance isn't blocked by a dead task.
+            self.clearSupervisorTaskIfFinished()
         }
+    }
+
+    private func clearSupervisorTaskIfFinished() {
+        if shouldStopSupervising { supervisorTask = nil }
     }
 
     public func stop() async throws {
@@ -134,6 +161,10 @@ public actor PianobarProcess {
         state = .stopped
     }
 
+    /// A process that stayed up at least this long counts as a successful
+    /// start, not part of a crash loop, so the backoff budget is refunded.
+    private static let healthyUptime: TimeInterval = 60
+
     private func superviseLoop() async {
         var failureIndex = 0
         while !shouldStopSupervising {
@@ -144,9 +175,17 @@ public actor PianobarProcess {
                 continue
             }
             state = .running
+            let startedAt = Date()
             // Block until the process exits.
             await waitForExit()
             if shouldStopSupervising { return }
+            // The budget is meant to stop a crash *loop*, not to cap total
+            // crashes for the life of the session. Without this reset a session
+            // that plays fine for hours and hits one transient crash per hour
+            // exhausts the budget and permanently gives up.
+            if Date().timeIntervalSince(startedAt) >= Self.healthyUptime {
+                failureIndex = 0
+            }
             // Unexpected exit.
             await handleFailure(&failureIndex)
         }
@@ -197,17 +236,25 @@ public actor PianobarProcess {
     private func waitForExit() async {
         guard let p = process else { return }
         let pid = p.processIdentifier
+        // `terminationHandler` fires on Foundation's own queue, so it can race
+        // the `!p.isRunning` fallback below: if the process exits in the window
+        // between the two, *both* paths run. Resuming a CheckedContinuation
+        // twice traps and takes the whole app down — which is exactly the
+        // fast-crash case the supervisor exists to handle. Clearing the handler
+        // afterwards can't unwind one that already fired, so gate on an atomic
+        // latch instead and let whichever path wins resume exactly once.
+        let latch = ResumeLatch()
         await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
             p.terminationHandler = { _ in
-                cont.resume()
+                if latch.claim() { cont.resume() }
             }
-            // If the process already exited before we set the handler, terminationHandler
-            // won't fire. Fall back to a detached wait.
-            if !p.isRunning {
-                p.terminationHandler = nil
+            // If the process already exited before we installed the handler,
+            // terminationHandler never fires — resume here instead.
+            if !p.isRunning, latch.claim() {
                 cont.resume()
             }
         }
+        p.terminationHandler = nil
         PianobarPIDRegistry.shared.clear(pid)
         process = nil
     }

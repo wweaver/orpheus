@@ -12,6 +12,15 @@ public final class PlaybackState: ObservableObject {
     @Published public private(set) var progressSeconds: Int = 0
     @Published public private(set) var errorBanner: String?
     @Published public private(set) var authFailure: String?
+    /// True once pianobar has reported a real `songstart` in *this* session.
+    /// Deliberately not set by `restoreSnapshot` — a restored snapshot tells us
+    /// what was playing last time, not that pianobar is past its startup
+    /// "Select station:" prompt. Callers that need to distinguish those two
+    /// cases must use this rather than `currentSong != nil`.
+    @Published public private(set) var hasLiveSong: Bool = false
+    /// Set while pianobar is fetching a playlist (i.e. after a station switch)
+    /// and cleared on the next `songstart`.
+    @Published public private(set) var isBuffering: Bool = false
 
     /// Auto-dismiss timeout for transient error banners. The banner sticks
     /// until either pianobar reports a new song (we infer recovery) or this
@@ -52,6 +61,8 @@ public final class PlaybackState: ObservableObject {
                               ?? currentStation
             progressSeconds = 0
             isPlaying = true
+            hasLiveSong = true
+            isBuffering = false
             // A new song means pianobar recovered from whatever transient
             // hiccup the banner was reporting. Don't clear authFailure
             // here — that's a separate, sticky condition.
@@ -63,22 +74,26 @@ public final class PlaybackState: ObservableObject {
         case .songBan:      currentSong?.rating = .banned
         case .songShelf:    break
         case .songBookmark, .artistBookmark: break
-        case .stationFetchPlaylist: break
+        case .stationFetchPlaylist:
+            isBuffering = true
         case .stationsChanged(let s):
             // Pianobar occasionally emits an empty stations list during
             // transient errors (network blip, expired session being refreshed,
             // etc.). Keep the last-known list rather than wiping the UI.
             guard !s.isEmpty else { break }
+            let previousName = currentStation?.name
             stations = s
-            currentStation = stations.first { $0.name == currentSong?.stationName }
-        case .stationCreated(let s):
-            if !stations.contains(where: { $0.id == s.id }) { stations.append(s) }
-        case .stationDeleted(let id):
-            stations.removeAll { $0.id == id }
-        case .stationRenamed(let id, let newName):
-            if let i = stations.firstIndex(where: { $0.id == id }) {
-                stations[i].name = newName
-            }
+            // Re-resolve against the refreshed list. Anchor on the previously
+            // selected station's *name*, not its id: pianobar doesn't emit real
+            // Pandora station ids, so `Station.id` falls back to the array
+            // index, which shifts whenever a station is created or deleted.
+            //
+            // The old code resolved solely from `currentSong?.stationName`,
+            // which evaluated to nil whenever no song was playing and silently
+            // wiped the sidebar's now-playing indicator.
+            currentStation = previousName.flatMap { name in stations.first { $0.name == name } }
+                ?? stations.first { $0.name == currentSong?.stationName }
+                ?? currentStation
         case .userLogin(let ok, let msg):
             authFailure = ok ? nil : (msg.isEmpty ? "Sign-in failed" : msg)
         case .pandoraError(_, let msg), .networkError(let msg):
@@ -103,6 +118,8 @@ public final class PlaybackState: ObservableObject {
         self.currentSong = currentSong
         self.progressSeconds = progressSeconds
         self.isPlaying = isPlaying
+        // Intentionally does NOT touch `hasLiveSong`: this is cached data from a
+        // previous session, not evidence that pianobar is currently playing.
     }
 
     public func setErrorBanner(_ message: String) {

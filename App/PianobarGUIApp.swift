@@ -8,6 +8,10 @@ struct PianobarGUIApp: App {
     @StateObject private var bootstrap = AppBootstrap()
 
     init() {
+        // Writing to a FIFO whose reader (pianobar) just died raises SIGPIPE,
+        // whose default disposition terminates the process. Ignore it so the
+        // write fails with EPIPE and PianobarCtrl can surface it instead.
+        signal(SIGPIPE, SIG_IGN)
         Prefs.registerDefaults()
         // Touch the registry so its atexit handler is installed before any
         // pianobar child is spawned.

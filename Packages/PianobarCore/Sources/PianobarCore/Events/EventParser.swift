@@ -6,10 +6,31 @@ public enum EventParser {
     public static func parse(eventType: String, payload: String) -> PianobarEvent? {
         let kv = parseKeyValues(payload)
 
-        // Check Pandora/network result codes first — if a command failed entirely
-        // with a network error, surface it instead of the nominal event.
-        if let wRet = kv["wRet"].flatMap(Int.init), wRet != 0 {
+        let wRet = kv["wRet"].flatMap(Int.init) ?? 0
+        let pRet = kv["pRet"].flatMap(Int.init) ?? 1
+
+        // `userlogin` must be decided before the generic failure checks below.
+        // Otherwise a sign-in that fails at the transport layer (no network,
+        // TLS failure, Pandora 5xx) produced a `.networkError` whose banner
+        // auto-clears after 30s, leaving the app looking idle and healthy while
+        // actually being unauthenticated, and never routing back to login.
+        if eventType == "userlogin" {
+            let ok = wRet == 0 && pRet == 1
+            let message = wRet != 0
+                ? (kv["wRetStr"] ?? "Network error")
+                : (kv["pRetStr"] ?? "")
+            return .userLogin(success: ok, message: message)
+        }
+
+        // A command that failed entirely: surface the failure instead of the
+        // nominal event.
+        if wRet != 0 {
             return .networkError(message: kv["wRetStr"] ?? "Network error")
+        }
+        // Pandora-side failures (station limit reached, skip limit, etc.) were
+        // previously dropped on the floor — only `wRet` was ever checked.
+        if pRet != 1 {
+            return .pandoraError(code: pRet, message: kv["pRetStr"] ?? "Pandora error")
         }
 
         switch eventType {
@@ -29,11 +50,16 @@ public enum EventParser {
             return .artistBookmark
         case "stationfetchplaylist":
             return .stationFetchPlaylist
-        case "usergetstations":
-            return .stationsChanged(stations(from: kv))
-        case "userlogin":
-            let ok = (kv["pRet"].flatMap(Int.init) ?? 0) == 1
-            return .userLogin(success: ok, message: kv["pRetStr"] ?? "")
+        // pianobar dumps the full `station<N>=` list on station mutations just
+        // as it does for `usergetstations`, so all of these carry a complete,
+        // authoritative list. Replacing wholesale keeps the sidebar in step and
+        // — since station commands address stations by array index — keeps
+        // those indices aligned with pianobar's own ordering.
+        case "usergetstations", "stationcreate", "stationdelete",
+             "stationrename", "stationaddmusic", "stationaddgenre",
+             "stationquickmixtoggle":
+            let list = stations(from: kv)
+            return list.isEmpty ? nil : .stationsChanged(list)
         default:
             return nil
         }
