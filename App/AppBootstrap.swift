@@ -44,11 +44,21 @@ final class AppBootstrap: ObservableObject {
         // a `playbackState == nil` check before either has populated it.
         if startInvoked { return }
         startInvoked = true
-        guard let creds = keychain.load() else {
+        switch keychain.loadOutcome() {
+        case .found(let email, let password):
+            await launch(email: email, password: password)
+        case .notFound:
             needsLogin = true
-            return
+        case .failed(let status):
+            // Reading the credentials failed for a reason *other* than their
+            // being absent — most often because the app was rebuilt and
+            // re-signed, so the keychain ACL no longer recognises it. Say so,
+            // rather than silently presenting the login screen as though this
+            // were a first run.
+            let detail = KeychainStore.Error.status(status).errorDescription ?? "error \(status)"
+            loginError = "Couldn't read your saved Pandora credentials: \(detail). Sign in again to store them for this build."
+            needsLogin = true
         }
-        await launch(email: creds.email, password: creds.password)
     }
 
     func saveCredentials(email: String, password: String) {
