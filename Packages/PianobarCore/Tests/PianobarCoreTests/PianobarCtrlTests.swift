@@ -51,4 +51,31 @@ final class PianobarCtrlTests: XCTestCase {
         // output volume directly instead.
         XCTAssertEqual(result, "p\nn\n+\n-\nt\nb\ns3\n")
     }
+
+    /// pianobar reads a command as a single character and then reads the rest
+    /// of that same line as the answer to whatever prompt the command opens.
+    /// Putting the answer on its own line means the newline gets consumed as
+    /// the answer instead — which is how `d\n` silently declined
+    /// `Really delete "..."? [yN]` and deleted nothing.
+    func testPromptAnsweringCommandsKeepTheAnswerOnTheCommandLine() async throws {
+        let exp = expectation(description: "reader done")
+        let reader = readAllBytes(exp)
+
+        let ctrl = PianobarCtrl(fifoPath: fifoURL.path)
+        try await ctrl.deleteStation()
+        try await ctrl.renameStation("Chill Radio")
+        try await ctrl.createStationFromSearch("Bon Iver")
+        await ctrl.close()
+
+        await fulfillment(of: [exp], timeout: 2)
+        let result = try await reader.value
+        XCTAssertEqual(result, """
+        dy
+        rChill Radio
+        cs
+        Bon Iver
+        0
+
+        """)
+    }
 }

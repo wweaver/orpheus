@@ -60,17 +60,33 @@ public actor PianobarCtrl {
     public func createStationFromArtist() async throws { try await write("v\n") }
 
     /// Drives pianobar's interactive create-station flow over the FIFO.
-    /// Sequence: `c` → kind (`s` song / `a` artist / etc.) → search query →
-    /// pick the first result (`0`). Pianobar reads each line in turn.
+    ///
+    /// Sequence: `c` → "Create station from [s]ong or [a]rtist?" → "Create
+    /// station from artist or title:" → "Select song:". See the note on
+    /// `deleteStation` for why the first answer shares a line with `c`.
     public func createStationFromSearch(_ query: String) async throws {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        try await write("c\n")
-        try await write("s\n")
+        try await write("cs\n")
         try await write("\(trimmed)\n")
         try await write("0\n")
     }
-    public func deleteStation()           async throws { try await write("d\n") }
+
+    /// Deletes the *currently playing* station.
+    ///
+    /// pianobar answers `d` with `Really delete "<name>"? [yN]`, and the
+    /// capital N means an empty answer declines. Sending `d\n` therefore never
+    /// deleted anything — the newline was consumed as "no" — and left pianobar
+    /// parked at the prompt, where it would swallow the user's next command.
+    ///
+    /// The `y` shares a line with the command because pianobar reads the
+    /// command as a single character and then reads the *rest of that line* as
+    /// the prompt's answer. `renameStation` below has always relied on the
+    /// same behaviour, which is why it worked while this didn't.
+    public func deleteStation() async throws { try await write("dy\n") }
+
+    /// Renames the *currently playing* station. `r` is the command; the rest
+    /// of the line answers pianobar's "New name:" prompt.
     public func renameStation(_ newName: String) async throws {
         try await write("r\(newName)\n")
     }

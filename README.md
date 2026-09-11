@@ -56,12 +56,18 @@ brew install pianobar xcodegen
 ```
 
 `scripts/make-signing-cert.sh` creates a self-signed code-signing certificate
-in your login keychain. Without it, Xcode signs the app ad-hoc, which gives it
-a designated requirement of a bare code hash that changes on every build — so
+in your login keychain. Without it the app is signed ad-hoc, which gives it a
+designated requirement of a bare code hash that changes on every build — so
 macOS treats each reinstall as a different app, the keychain stops handing over
 your saved Pandora credentials, and you have to sign in again after every
-install. `install.sh` falls back to ad-hoc signing if the certificate isn't
-there, so a fresh clone still builds.
+install.
+
+It's optional. The project signs ad-hoc by default, so a fresh clone builds
+anywhere including straight from Xcode; `install.sh` uses the stable identity
+only when the certificate exists. The trade-off is that binding credentials to
+a stable identity also means anything running code as you could sign a bundle
+claiming the same identifier and read the stored password without a prompt —
+reasonable for a personal-use app, but skip the script if you'd rather not.
 
 `scripts/install.sh` builds Release, drops `Orpheus.app` into `~/Applications/`,
 and launches it. After that, find it via Spotlight (`⌘Space` → "Orpheus"),

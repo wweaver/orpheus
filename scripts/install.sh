@@ -33,18 +33,29 @@ rm -rf "$HOME/Applications/PianobarGUI.app"
 echo "▶︎ Regenerating Xcode project"
 xcodegen generate >/dev/null
 
-# Builds are signed with a stable local identity so the keychain keeps
-# recognising the app across reinstalls (see scripts/make-signing-cert.sh).
-# Fall back to ad-hoc on a machine that doesn't have it, so a fresh clone
-# still builds — at the cost of re-entering the Pandora password each time.
+# The project signs ad-hoc by default so a fresh clone builds anywhere. If the
+# stable local identity exists, use it instead: ad-hoc signing gives the app a
+# designated requirement of a bare code hash that changes every build, so macOS
+# treats each reinstall as a different app and stops handing over the saved
+# Pandora credentials. See scripts/make-signing-cert.sh.
+#
 # Note the guarded expansion at the xcodebuild call below: macOS still ships
 # bash 3.2, where expanding an empty array under `set -u` is an error.
 SIGN_ARGS=()
-if ! security find-certificate -c "Orpheus Code Signing" >/dev/null 2>&1; then
+if security find-certificate -c "Orpheus Code Signing" >/dev/null 2>&1; then
+  # CODE_SIGN_STYLE=Manual is required alongside the identity: a command-line
+  # build-setting override applies to *every* target, including the SwiftPM
+  # resource bundle, and that one defaults to automatic signing — which then
+  # fails with "requires a development team".
+  SIGN_ARGS=(
+    CODE_SIGN_IDENTITY="Orpheus Code Signing"
+    CODE_SIGN_STYLE=Manual
+    DEVELOPMENT_TEAM=""
+  )
+else
   echo "⚠︎  No 'Orpheus Code Signing' certificate found; signing ad-hoc."
   echo "   You'll have to re-enter your Pandora password after each install."
   echo "   Run ./scripts/make-signing-cert.sh once to fix that."
-  SIGN_ARGS=(CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Automatic)
 fi
 
 echo "▶︎ Building PianobarGUI (Release)"

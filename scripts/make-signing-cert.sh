@@ -20,6 +20,14 @@
 # — `codesign` doesn't need that, and leaving it untrusted keeps the change
 # contained to a single keychain entry.
 #
+# Trade-off worth understanding: binding the keychain item to a *stable*
+# identity is exactly what makes the credentials survive reinstalls, and it
+# also means anything able to run code as you could sign a bundle claiming the
+# same identifier and read the Pandora password without a prompt. The ad-hoc
+# cdhash binding made that impractical. For a personal-use app that's a
+# reasonable trade for not retyping the password after every build; if you'd
+# rather not make it, skip this script and accept the re-login.
+#
 # To undo: delete "Orpheus Code Signing" in Keychain Access (login keychain,
 # My Certificates), and drop CODE_SIGN_IDENTITY from project.yml.
 
@@ -64,9 +72,10 @@ openssl pkcs12 -export -inkey "$WORK/key.pem" -in "$WORK/cert.pem" \
   -out "$WORK/id.p12" -passout pass:orpheus-temp -name "$CERT_NAME" >/dev/null 2>&1
 
 echo "▶︎ Importing into your login keychain"
-# -T lets codesign use the private key without prompting every build.
+# -T lets codesign use the private key without prompting on every build. Only
+# codesign is granted: any other tool that wants this key should have to ask.
 security import "$WORK/id.p12" -k "$KEYCHAIN" -P orpheus-temp \
-  -T /usr/bin/codesign -T /usr/bin/security >/dev/null
+  -T /usr/bin/codesign >/dev/null
 
 echo "✓ Created '$CERT_NAME'."
 echo "  Builds will now be signed with it; run ./scripts/install.sh to pick it up."
