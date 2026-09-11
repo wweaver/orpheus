@@ -242,7 +242,7 @@ final class AppBootstrap: ObservableObject {
         // Only reflect the pause in the UI if pianobar actually got the
         // command, so the transport doesn't desync into a state where the
         // button does nothing.
-        if Self.writeFifoSync("p\n", at: fifoPath) {
+        if Self.writeFifoSync("S\n", at: fifoPath) {
             state.setPlaying(false)
         }
     }
@@ -274,7 +274,7 @@ final class AppBootstrap: ObservableObject {
             // snapshot) to decide whether to toggle on attach — claiming a
             // pause that never happened made that launch send a blind toggle
             // and *stop* the music the user expected to still be playing.
-            let paused = Self.writeFifoSync("p\n", at: fifoPath)
+            let paused = Self.writeFifoSync("S\n", at: fifoPath)
             UserDefaults.standard.set(paused, forKey: Prefs.Keys.pianobarWasPaused)
         } else {
             UserDefaults.standard.set(false, forKey: Prefs.Keys.pianobarWasPaused)
@@ -487,7 +487,7 @@ final class AppBootstrap: ObservableObject {
             // exits (SIGTERM from killall, force quit, crash) leave pianobar
             // in whatever state it was in; toggling blindly would silence it.
             if wasPaused {
-                Task { try? await ctrl.togglePlay(); state.setPlaying(true) }
+                Task { try? await ctrl.play(); state.setPlaying(true) }
                 UserDefaults.standard.set(false, forKey: Prefs.Keys.pianobarWasPaused)
             } else {
                 // Match what's on disk: pianobar kept playing through our

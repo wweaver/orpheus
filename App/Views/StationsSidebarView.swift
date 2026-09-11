@@ -112,7 +112,8 @@ struct StationsSidebarView: View {
             }
         }
         .sheet(item: $stationToRename) { station in
-            RenameStationSheet(originalName: station.name) { newName in
+            RenameStationSheet(originalName: station.name,
+                               note: renameNote(for: station)) { newName in
                 stationToRename = nil
                 rename(station, to: newName)
             } onCancel: {
@@ -135,8 +136,20 @@ struct StationsSidebarView: View {
                 stationToDelete = nil
             }
         } message: { station in
-            Text("Are you sure you want to delete \"\(station.name)\"? This can't be undone.")
+            Text(deleteWarning(for: station))
         }
+    }
+
+    /// pianobar can only delete the station it's currently playing, so removing
+    /// any other one means switching to it first — which ends the song you're
+    /// listening to. Say so up front rather than letting it happen unannounced;
+    /// the app switches back afterwards, but on a new song.
+    private func deleteWarning(for station: Station) -> String {
+        let base = "Are you sure you want to delete \"\(station.name)\"? This can't be undone."
+        guard let current = state.currentStation, current.id != station.id else { return base }
+        return base + "\n\nThis will interrupt playback: pianobar can only delete the station "
+            + "it's playing, so Orpheus has to switch to \"\(station.name)\" first. "
+            + "You'll be returned to \"\(current.name)\" afterwards, on a new song."
     }
 
     /// Stable view tree: the speaker icon is always rendered and toggled via
@@ -222,13 +235,18 @@ struct StationsSidebarView: View {
     }
 
     /// Pianobar's `r` renames the *currently playing* station, so for any
-    /// other station we have to switch to it first.
+    /// other station we have to switch to it first — and then put the user
+    /// back on whatever they were actually listening to.
     private func rename(_ station: Station, to newName: String) {
         let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed != station.name else { return }
         Task {
+            let resumeTo = stationToResumeAfterActing(on: station)
             guard await makeCurrent(station, action: "rename") else { return }
             try? await ctrl.renameStation(trimmed)
+            // The station we're returning to may itself have been renamed, so
+            // resolve by the new name when that's the one we left.
+            await resume(resumeTo == station.name ? trimmed : resumeTo)
         }
     }
 
@@ -236,8 +254,51 @@ struct StationsSidebarView: View {
     /// any other station we have to switch to it first.
     private func delete(_ station: Station) {
         Task {
+            let resumeTo = stationToResumeAfterActing(on: station)
             guard await makeCurrent(station, action: "delete") else { return }
             try? await ctrl.deleteStation()
+            await resume(resumeTo)
+        }
+    }
+
+    private func renameNote(for station: Station) -> String {
+        guard let current = state.currentStation, current.id != station.id else {
+            return "Renaming applies to the station you're currently playing."
+        }
+        return "pianobar can only rename the station it's playing, so this will switch to "
+            + "\"\(station.name)\" and interrupt playback, then return you to "
+            + "\"\(current.name)\" on a new song."
+    }
+
+    /// Name of the station to return to once we're done acting on `station`,
+    /// or nil if there's nothing to go back to.
+    ///
+    /// Renaming and deleting both require making the target station current,
+    /// which starts playing it. Left alone, asking to delete a station you
+    /// weren't listening to would interrupt your music and start the very
+    /// station you're removing.
+    private func stationToResumeAfterActing(on station: Station) -> String? {
+        guard let current = state.currentStation, current.id != station.id else { return nil }
+        return current.name
+    }
+
+    /// Go back to the station identified by `name` once the mutation has been
+    /// applied.
+    private func resume(_ name: String?) async {
+        guard let name else { return }
+        // Wait for pianobar's refreshed station list before resolving an
+        // index: a delete shifts every index after it, so acting on the stale
+        // list would switch to the wrong station.
+        let deadline = Date().addingTimeInterval(Self.stationSwitchTimeout)
+        while Date() < deadline {
+            if let idx = state.stations.firstIndex(where: { $0.name == name }),
+               state.currentStation?.name != name {
+                try? await ctrl.switchStation(index: idx)
+                return
+            }
+            // Already back where we started — nothing to do.
+            if state.currentStation?.name == name { return }
+            try? await Task.sleep(nanoseconds: 100_000_000)
         }
     }
 
@@ -310,15 +371,19 @@ private struct AddStationSheet: View {
 
 private struct RenameStationSheet: View {
     let originalName: String
+    /// Explains the playback consequence when this isn't the playing station.
+    let note: String
     let onSubmit: (String) -> Void
     let onCancel: () -> Void
     @State private var name: String
     @FocusState private var focused: Bool
 
     init(originalName: String,
+         note: String,
          onSubmit: @escaping (String) -> Void,
          onCancel: @escaping () -> Void) {
         self.originalName = originalName
+        self.note = note
         self.onSubmit = onSubmit
         self.onCancel = onCancel
         _name = State(initialValue: originalName)
@@ -327,7 +392,7 @@ private struct RenameStationSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Rename Station").font(.headline)
-            Text("Pianobar will briefly switch to this station to apply the rename.")
+            Text(note)
                 .font(.caption)
                 .foregroundStyle(.secondary)
             TextField("Station name", text: $name)

@@ -25,8 +25,12 @@ public actor PianobarCtrl {
         self.fifoPath = fifoPath
     }
 
-    // pianobar's `p` is a single play/pause *toggle*; there is no separate
-    // play or pause command, so all three map to the same write.
+    // pianobar has explicit `P` (play) and `S` (pause) alongside the `p`
+    // toggle. Use the explicit ones: a blind toggle means the app's idea of
+    // the play state is only ever a guess, and once that guess drifts — a lost
+    // write, a pause from another source — every later toggle is inverted and
+    // the transport button does the opposite of what it says. `P` and `S` are
+    // idempotent, so they resynchronise instead of compounding the error.
     //
     // Known pianobar limitation (intentionally not worked around): while
     // paused, pianobar stops reading the Pandora audio stream. After a pause
@@ -35,8 +39,8 @@ public actor PianobarCtrl {
     // buffered tail, hits EOF, treats it as end-of-track, and advances to the
     // next song. pianobar exposes no way to re-fetch the current song, so we
     // rely on its buffer and accept this — short pauses resume normally.
-    public func play()          async throws { try await write("p\n") }
-    public func pause()         async throws { try await write("p\n") }
+    public func play()          async throws { try await write("P\n") }
+    public func pause()         async throws { try await write("S\n") }
     public func togglePlay()    async throws { try await write("p\n") }
     public func next()          async throws { try await write("n\n") }
     public func love()          async throws { try await write("+\n") }
