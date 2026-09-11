@@ -5,7 +5,8 @@ Spiritual successor to [Hermes](https://hermesapp.org/), which doesn't run on
 modern macOS anymore.
 
 Menu-bar presence, Now Playing widget, media-key control, notifications,
-station list, thumbs / tired / bookmark, history, auto-resume of last station,
+station list with filter, thumbs / tired / bookmark, played-song history,
+volume, global and in-app keyboard shortcuts, auto-resume of last station,
 and an experimental pause-on-quit / resume-on-launch mode.
 
 ## Screenshots
@@ -28,6 +29,21 @@ from a full now-playing card down to a small transport strip.
 **Menu bar** — Now Playing title, quick actions, and the full station list one click away.
 
 <img src="docs/screenshots/menu-bar.png" alt="Menu bar dropdown showing Now Playing title, Show Stations, Show Preferences, Quit, and a scrollable station list" width="220">
+
+## Keyboard shortcuts
+
+In-app, under the **Controls** menu:
+
+| Action | Shortcut |
+| --- | --- |
+| Play / Pause | ⌘⇧P |
+| Next Song | ⌘→ |
+| Thumbs Up / Down | ⌘↑ / ⌘↓ |
+| Tired of Song | ⌘⇧T |
+| Bookmark Song | ⌘⇧B |
+
+System-wide hotkeys (off by default) are bound in **Preferences → Hotkeys**:
+click a shortcut, press the keys, include at least one modifier.
 
 ## Install (personal use)
 
@@ -71,7 +87,7 @@ docs/superpowers/       Design spec, implementation plans, QA checklists.
 ```bash
 brew install xcodegen
 xcodegen generate
-cd Packages/PianobarCore && swift test     # 32 tests
+cd Packages/PianobarCore && swift test     # 55 tests
 open ../../PianobarGUI.xcodeproj           # to develop in Xcode
 ```
 

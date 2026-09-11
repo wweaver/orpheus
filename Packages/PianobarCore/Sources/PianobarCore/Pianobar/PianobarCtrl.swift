@@ -65,12 +65,6 @@ public actor PianobarCtrl {
     public func renameStation(_ newName: String) async throws {
         try await write("r\(newName)\n")
     }
-    /// Deprecated. Pianobar's FIFO has no absolute-volume command; `(` and
-    /// `)` are increment/decrement only, so the previous "(<N>" syntax was
-    /// just decrementing pianobar's volume one step per call. The app now
-    /// drives macOS system output volume directly. This stub is kept so
-    /// existing callers don't break.
-    public func setVolume(_ v: Int) async throws {}
     public func quit() async throws { try await write("q\n") }
 
     public func close() {

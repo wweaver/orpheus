@@ -38,10 +38,19 @@ private struct MenuBarTitle: View {
         if showTitle  { parts.append(song.title) }
         let raw = parts.joined(separator: " — ")
         let width = max(10, maxWidth)
-        let truncated = raw.count > width
-            ? String(raw.prefix(width - 1)) + "…"
-            : raw
-        return "♪ " + truncated
+        return "♪ " + middleTruncated(raw, to: width)
+    }
+
+    /// Truncate in the middle rather than at the end. With "artist — title"
+    /// titles, a trailing ellipsis eats the song name first and leaves only
+    /// the artist visible.
+    private func middleTruncated(_ text: String, to width: Int) -> String {
+        guard text.count > width else { return text }
+        guard width > 1 else { return String(text.prefix(width)) }
+        let keep = width - 1
+        let lead = keep - keep / 2
+        let trail = keep / 2
+        return String(text.prefix(lead)) + "…" + String(text.suffix(trail))
     }
 }
 
@@ -65,12 +74,10 @@ struct MenuBarContent: View {
         } else {
             Button("Show Orpheus") { MenuBarActions.showMainWindow(openWindow: openWindow) }
             Button("Preferences…") { MenuBarActions.openSettings(openSettings: openSettings) }
-                .keyboardShortcut(",")
             Divider()
             Button("Starting…") {}.disabled(true)
             Divider()
             Button("Quit Orpheus") { NSApp.terminate(nil) }
-                .keyboardShortcut("q")
         }
     }
 }
@@ -84,15 +91,15 @@ private struct MenuBarCommands: View {
     var body: some View {
         Button("Show Orpheus") { MenuBarActions.showMainWindow(openWindow: openWindow) }
         Button("Preferences…") { MenuBarActions.openSettings(openSettings: openSettings) }
-            .keyboardShortcut(",")
 
         Divider()
 
+        // No ⌘P here: it collides with the system-standard Print, and the
+        // Controls menu in the main window owns the real shortcuts now.
         Button(state.isPlaying ? "Pause" : "Play") {
             let target = !state.isPlaying
             Task { await state.setPlayback(target, via: ctrl) }
         }
-        .keyboardShortcut("p")
 
         Button("Next") {
             Task { try? await ctrl.next() }
@@ -136,7 +143,6 @@ private struct MenuBarCommands: View {
         Divider()
 
         Button("Quit Orpheus") { NSApp.terminate(nil) }
-            .keyboardShortcut("q")
     }
 }
 

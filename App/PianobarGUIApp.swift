@@ -23,11 +23,16 @@ struct PianobarGUIApp: App {
             RootView()
                 .environmentObject(bootstrap)
                 .task { await bootstrap.start() }
-                .frame(minWidth: 320, idealWidth: 560,  maxWidth: 780,
-                       minHeight: 120, idealHeight: 560, maxHeight: 560)
+                // No upper bound: the previous 780x560 cap meant people on
+                // large displays couldn't make the player any bigger. The
+                // layout already adapts by progressively hiding content as the
+                // window shrinks, so only the minimum needs pinning.
+                .frame(minWidth: 320, idealWidth: 560,
+                       minHeight: 120, idealHeight: 560)
         }
         .windowResizability(.contentSize)
         .defaultSize(width: 560, height: 560)
+        .commands { PlaybackCommands(bootstrap: bootstrap) }
 
         Settings {
             PreferencesView().environmentObject(bootstrap)

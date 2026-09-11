@@ -7,7 +7,9 @@ struct ErrorBanner: View {
 
     var body: some View {
         HStack {
-            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+                .accessibilityHidden(true)
             Text(message).lineLimit(2)
             Spacer()
             if let retry = onRetry {
@@ -15,8 +17,16 @@ struct ErrorBanner: View {
             }
             Button(action: onDismiss) { Image(systemName: "xmark") }
                 .buttonStyle(.borderless)
+                .help("Dismiss")
+                .accessibilityLabel("Dismiss message")
         }
         .padding(10)
-        .background(Color.yellow.opacity(0.15))
+        .frame(maxWidth: .infinity)
+        // A semantic material rather than a hardcoded yellow wash, so the
+        // banner adapts to dark mode and increased-contrast settings.
+        .background(.thinMaterial)
+        .overlay(alignment: .bottom) { Divider() }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Error: \(message)")
     }
 }

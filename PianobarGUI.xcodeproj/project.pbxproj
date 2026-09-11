@@ -19,7 +19,9 @@
 		6C6594AF6B1288212D035626 /* PlaybackTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7839798FA6C9B3317F3BCE13 /* PlaybackTransport.swift */; };
 		9043EC6B5D2ED6FA44E223DC /* MenuBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B27A33793EFCD536E4CE7D1 /* MenuBar.swift */; };
 		A0AA32140B4EE7C02AC47234 /* MainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CAC15D89B673192722274EC /* MainWindowView.swift */; };
+		AB1624630F58CEC1DD5F0586 /* HotkeyRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF400929F736279A9E5F98B9 /* HotkeyRecorder.swift */; };
 		BDEA039AC61C621EB3FCDD71 /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F131B6A830377123C387B091 /* PreferencesView.swift */; };
+		CBD9D95156CCB97E7067DE26 /* PlaybackCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C07280115783998B20AB18B /* PlaybackCommands.swift */; };
 		D6FDBE89C173B604A693917F /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42A133FADB073A0E23B2FEDE /* LoginView.swift */; };
 		D70DF8A974C65F39212755DB /* NowPlayingBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E61C01A9FD4B908B4910C6D /* NowPlayingBridge.swift */; };
 		E145C93EA899C688EB5E985A /* PianobarGUIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC907284417A2ED90AE92C82 /* PianobarGUIApp.swift */; };
@@ -31,6 +33,7 @@
 
 /* Begin PBXFileReference section */
 		0B27A33793EFCD536E4CE7D1 /* MenuBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBar.swift; sourceTree = "<group>"; };
+		0C07280115783998B20AB18B /* PlaybackCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackCommands.swift; sourceTree = "<group>"; };
 		1BC5936206EFA2AD9926CC64 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
 		381EAF5E52455D1215CCA695 /* AppIcon-source.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AppIcon-source.png"; sourceTree = "<group>"; };
 		42A133FADB073A0E23B2FEDE /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
@@ -43,6 +46,7 @@
 		B2210E62872345F44D14C42F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C12322653DF30954F37F01AF /* AppBootstrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBootstrap.swift; sourceTree = "<group>"; };
 		CDF6D2FDA80F91D75A970C43 /* SessionSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSnapshot.swift; sourceTree = "<group>"; };
+		CF400929F736279A9E5F98B9 /* HotkeyRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyRecorder.swift; sourceTree = "<group>"; };
 		D60D0DE7DD8F552AFC71D4F1 /* NotificationPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPresenter.swift; sourceTree = "<group>"; };
 		DC907284417A2ED90AE92C82 /* PianobarGUIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PianobarGUIApp.swift; sourceTree = "<group>"; };
 		DCBC3E6F9EB0BCB3B76588B8 /* ErrorBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBanner.swift; sourceTree = "<group>"; };
@@ -92,6 +96,7 @@
 				94F3B7C1C3C3828388DC53DB /* Assets.xcassets */,
 				B2210E62872345F44D14C42F /* Info.plist */,
 				DC907284417A2ED90AE92C82 /* PianobarGUIApp.swift */,
+				0C07280115783998B20AB18B /* PlaybackCommands.swift */,
 				7839798FA6C9B3317F3BCE13 /* PlaybackTransport.swift */,
 				55E5367FD41FCDDF946E82B0 /* Prefs.swift */,
 				CDF6D2FDA80F91D75A970C43 /* SessionSnapshot.swift */,
@@ -133,6 +138,7 @@
 			children = (
 				DCBC3E6F9EB0BCB3B76588B8 /* ErrorBanner.swift */,
 				FBC19A543E459CFE9C8F7BEA /* HistoryView.swift */,
+				CF400929F736279A9E5F98B9 /* HotkeyRecorder.swift */,
 				42A133FADB073A0E23B2FEDE /* LoginView.swift */,
 				9CAC15D89B673192722274EC /* MainWindowView.swift */,
 				1BC5936206EFA2AD9926CC64 /* NowPlayingView.swift */,
@@ -223,6 +229,7 @@
 				2B54E61E07F5174385F4A133 /* ErrorBanner.swift in Sources */,
 				5B38113740DE745403CDEAAC /* GlobalHotkeys.swift in Sources */,
 				07AAAA4C4F9E0E3B9AEAB0E6 /* HistoryView.swift in Sources */,
+				AB1624630F58CEC1DD5F0586 /* HotkeyRecorder.swift in Sources */,
 				D6FDBE89C173B604A693917F /* LoginView.swift in Sources */,
 				A0AA32140B4EE7C02AC47234 /* MainWindowView.swift in Sources */,
 				9043EC6B5D2ED6FA44E223DC /* MenuBar.swift in Sources */,
@@ -230,6 +237,7 @@
 				D70DF8A974C65F39212755DB /* NowPlayingBridge.swift in Sources */,
 				F0D1D777ABDAEF27887D3867 /* NowPlayingView.swift in Sources */,
 				E145C93EA899C688EB5E985A /* PianobarGUIApp.swift in Sources */,
+				CBD9D95156CCB97E7067DE26 /* PlaybackCommands.swift in Sources */,
 				6C6594AF6B1288212D035626 /* PlaybackTransport.swift in Sources */,
 				BDEA039AC61C621EB3FCDD71 /* PreferencesView.swift in Sources */,
 				F40435B8A65FFE21EF7A36A1 /* Prefs.swift in Sources */,

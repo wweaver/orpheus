@@ -42,13 +42,13 @@ final class PianobarCtrlTests: XCTestCase {
         try await ctrl.tired()
         try await ctrl.bookmarkSong()
         try await ctrl.switchStation(index: 3)
-        try await ctrl.setVolume(75)  // intentional no-op; macOS volume is used.
         await ctrl.close()
 
         await fulfillment(of: [exp], timeout: 2)
         let result = try await reader.value
-        // Exact byte sequence pianobar expects. setVolume writes nothing
-        // because pianobar's FIFO has no absolute-volume command.
+        // Exact byte sequence pianobar expects. There is no volume command:
+        // pianobar's FIFO has only relative steps, so the app drives macOS
+        // output volume directly instead.
         XCTAssertEqual(result, "p\nn\n+\n-\nt\nb\ns3\n")
     }
 }

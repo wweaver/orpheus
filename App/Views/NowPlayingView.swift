@@ -7,12 +7,29 @@ struct NowPlayingView: View {
     @ObservedObject var state: PlaybackState
     let ctrl: PianobarCtrl
     var windowSize: CGSize = .zero
+    /// False when the current output device exposes no settable main volume
+    /// (some aggregate and HDMI devices), so we hide the slider rather than
+    /// show a dead control.
+    @State private var volumeAvailable: Bool = false
 
     private var showArt: Bool {
         windowSize.height >= 430
     }
     private var showHeader: Bool {
         windowSize.height >= 190
+    }
+    /// Art grows with the window now that the window itself isn't capped,
+    /// while leaving room for the metadata, transport and progress below it.
+    private var artMaxWidth: CGFloat {
+        let byWidth = windowSize.width - 48
+        let byHeight = windowSize.height - 260
+        return max(120, min(min(byWidth, byHeight), 420))
+    }
+
+    /// Same progressive-disclosure idea as the art and header: the volume
+    /// slider is the first thing to go when the window gets short.
+    private var showVolume: Bool {
+        windowSize.height >= 330 && volumeAvailable
     }
 
     var body: some View {
@@ -21,7 +38,7 @@ struct NowPlayingView: View {
                 if showArt {
                     albumArt
                         .aspectRatio(1, contentMode: .fit)
-                        .frame(maxWidth: 240)
+                        .frame(maxWidth: artMaxWidth)
                 }
 
                 if showHeader {
@@ -37,6 +54,7 @@ struct NowPlayingView: View {
                     } else {
                         Text("Not playing").foregroundStyle(.secondary)
                     }
+                    stationLine
                 }
 
                 HStack(spacing: 8) {
@@ -72,11 +90,47 @@ struct NowPlayingView: View {
                 }
 
                 progressBar
+
+                if showVolume {
+                    volumeSlider
+                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
             .padding(.bottom, 16)
             .frame(maxWidth: .infinity)
+        }
+        .onAppear {
+            // Seed from the actual device so the slider doesn't start at a
+            // made-up 50 and jump when first touched.
+            if let level = SystemVolume.read() {
+                state.volume = level
+                volumeAvailable = true
+            } else {
+                volumeAvailable = false
+            }
+        }
+    }
+
+    /// With the sidebar collapsed there was no indication of which station was
+    /// playing. Doubles as the buffering indicator: `stationFetchPlaylist` was
+    /// parsed and then discarded, so a station switch showed nothing at all for
+    /// the several seconds it takes.
+    @ViewBuilder
+    private var stationLine: some View {
+        if state.isBuffering {
+            HStack(spacing: 5) {
+                ProgressView().controlSize(.mini)
+                Text("Buffering…")
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+        } else if let station = state.currentStation {
+            Text(station.name)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .accessibilityLabel("Station: \(station.name)")
         }
     }
 
@@ -108,6 +162,37 @@ struct NowPlayingView: View {
     }
 
     private var rating: Rating { state.currentSong?.rating ?? .unrated }
+
+    /// Drives macOS output volume. pianobar's FIFO has no absolute-volume
+    /// command, so there is nothing to send it here.
+    @ViewBuilder
+    private var volumeSlider: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "speaker.fill")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+            Slider(
+                value: Binding(
+                    get: { Double(state.volume) },
+                    set: { newValue in
+                        let level = Int(newValue.rounded())
+                        state.volume = level
+                        SystemVolume.set(level)
+                    }
+                ),
+                in: 0...100
+            )
+            Image(systemName: "speaker.wave.3.fill")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+        }
+        .padding(.horizontal, 12)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Volume")
+        .accessibilityValue("\(state.volume) percent")
+    }
 
     private func transportButton(
         systemName: String,
@@ -339,10 +424,20 @@ struct NowPlayingView: View {
     @ViewBuilder
     private var albumArt: some View {
         if let url = state.currentSong?.coverArtURL {
-            AsyncImage(url: url) { image in
-                image.resizable().scaledToFit()
-            } placeholder: {
-                placeholderArt
+            // Use the phase-based initializer so a failed load falls back to
+            // the placeholder. The closure-pair form treats failure the same as
+            // "still loading", so art that 404s span forever.
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().scaledToFit()
+                case .failure:
+                    placeholderArt
+                case .empty:
+                    placeholderArt.overlay { ProgressView().controlSize(.small) }
+                @unknown default:
+                    placeholderArt
+                }
             }
         } else {
             placeholderArt

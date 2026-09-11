@@ -17,11 +17,32 @@ struct StationsSidebarView: View {
 
     @State private var lastClickedID: String?
     @State private var lastClickedAt: Date = .distantPast
+    @State private var filter: String = ""
+
+    private var filteredStations: [Station] {
+        let trimmed = filter.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return state.stations }
+        return state.stations.filter {
+            $0.name.localizedCaseInsensitiveContains(trimmed)
+        }
+    }
+
+    /// A new account has no stations yet; the bare list plus an unexplained
+    /// "+" gave no hint about what to do.
+    private var emptyState: some View {
+        ContentUnavailableView {
+            Label("No Stations", systemImage: "antenna.radiowaves.left.and.right")
+        } description: {
+            Text("Create your first station from a song or artist you like.")
+        } actions: {
+            Button("Create Station…") { addSheetPresented = true }
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             List(selection: $selection) {
-                ForEach(state.stations) { station in
+                ForEach(filteredStations) { station in
                     row(for: station)
                         .contextMenu {
                             Button("Start station") { switchTo(station) }
@@ -39,9 +60,17 @@ struct StationsSidebarView: View {
                 activateSelectedStation()
                 return .handled
             }
-            .onKeyPress(.space) {
-                activateSelectedStation()
-                return .handled
+            // Deliberately no `.space` binding: space is the universal
+            // play/pause key, and binding it here made pressing it tear down
+            // the current stream and start a different station. It also broke
+            // List's type-select.
+            .searchable(text: $filter, placement: .sidebar, prompt: "Filter stations")
+            .overlay {
+                if state.stations.isEmpty {
+                    emptyState
+                } else if filteredStations.isEmpty {
+                    ContentUnavailableView.search(text: filter)
+                }
             }
 
             Divider()
@@ -54,6 +83,7 @@ struct StationsSidebarView: View {
                 }
                 .buttonStyle(.borderless)
                 .help("New station from search")
+                .accessibilityLabel("New station")
 
                 Button {
                     if let id = selection,
@@ -65,6 +95,7 @@ struct StationsSidebarView: View {
                 }
                 .buttonStyle(.borderless)
                 .help("Delete selected station")
+                .accessibilityLabel("Delete selected station")
                 .disabled(selection == nil)
 
                 Spacer()
@@ -124,6 +155,11 @@ struct StationsSidebarView: View {
             Text(station.name)
                 .fontWeight(isCurrent ? .semibold : .regular)
         }
+        // The speaker glyph is decorative and hidden from VoiceOver, so fold
+        // "now playing" into the row's own label — otherwise there's no way to
+        // tell which station is playing.
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(isCurrent ? "\(station.name), now playing" : station.name)
     }
 
     private func row(for station: Station) -> some View {
@@ -237,6 +273,7 @@ struct StationsSidebarView: View {
 
 private struct AddStationSheet: View {
     @State private var query: String = ""
+    @FocusState private var focused: Bool
     let onSubmit: (String) -> Void
     let onCancel: () -> Void
 
@@ -248,6 +285,7 @@ private struct AddStationSheet: View {
                 .foregroundStyle(.secondary)
             TextField("Song or artist", text: $query)
                 .textFieldStyle(.roundedBorder)
+                .focused($focused)
                 .onSubmit(submit)
             HStack {
                 Spacer()
@@ -260,6 +298,7 @@ private struct AddStationSheet: View {
         }
         .padding(20)
         .frame(width: 360)
+        .onAppear { focused = true }
     }
 
     private func submit() {
@@ -274,6 +313,7 @@ private struct RenameStationSheet: View {
     let onSubmit: (String) -> Void
     let onCancel: () -> Void
     @State private var name: String
+    @FocusState private var focused: Bool
 
     init(originalName: String,
          onSubmit: @escaping (String) -> Void,
@@ -292,6 +332,7 @@ private struct RenameStationSheet: View {
                 .foregroundStyle(.secondary)
             TextField("Station name", text: $name)
                 .textFieldStyle(.roundedBorder)
+                .focused($focused)
                 .onSubmit(submit)
             HStack {
                 Spacer()
@@ -304,6 +345,7 @@ private struct RenameStationSheet: View {
         }
         .padding(20)
         .frame(width: 360)
+        .onAppear { focused = true }
     }
 
     private var disabled: Bool {
