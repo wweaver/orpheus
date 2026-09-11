@@ -31,7 +31,14 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: YES
         ENABLE_HARDENED_RUNTIME: YES
-        CODE_SIGN_STYLE: Automatic
+        # Signed with a stable, self-signed local identity rather than ad-hoc.
+        # Ad-hoc signing gives the app a designated requirement of a bare code
+        # hash, which changes on every build — so macOS treats each reinstall
+        # as a different app and the keychain stops handing over the saved
+        # Pandora credentials. Run scripts/make-signing-cert.sh once to create
+        # it; install.sh falls back to ad-hoc if it's missing.
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "Orpheus Code Signing"
         DEVELOPMENT_TEAM: ""
         SWIFT_VERSION: 5.9
         MACOSX_DEPLOYMENT_TARGET: "14.0"

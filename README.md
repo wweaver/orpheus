@@ -51,8 +51,17 @@ click a shortcut, press the keys, include at least one modifier.
 git clone git@github.com:wweaver/orpheus.git
 cd orpheus
 brew install pianobar xcodegen
+./scripts/make-signing-cert.sh   # once — see below
 ./scripts/install.sh
 ```
+
+`scripts/make-signing-cert.sh` creates a self-signed code-signing certificate
+in your login keychain. Without it, Xcode signs the app ad-hoc, which gives it
+a designated requirement of a bare code hash that changes on every build — so
+macOS treats each reinstall as a different app, the keychain stops handing over
+your saved Pandora credentials, and you have to sign in again after every
+install. `install.sh` falls back to ad-hoc signing if the certificate isn't
+there, so a fresh clone still builds.
 
 `scripts/install.sh` builds Release, drops `Orpheus.app` into `~/Applications/`,
 and launches it. After that, find it via Spotlight (`⌘Space` → "Orpheus"),

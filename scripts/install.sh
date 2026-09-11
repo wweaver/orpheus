@@ -33,6 +33,20 @@ rm -rf "$HOME/Applications/PianobarGUI.app"
 echo "▶︎ Regenerating Xcode project"
 xcodegen generate >/dev/null
 
+# Builds are signed with a stable local identity so the keychain keeps
+# recognising the app across reinstalls (see scripts/make-signing-cert.sh).
+# Fall back to ad-hoc on a machine that doesn't have it, so a fresh clone
+# still builds — at the cost of re-entering the Pandora password each time.
+# Note the guarded expansion at the xcodebuild call below: macOS still ships
+# bash 3.2, where expanding an empty array under `set -u` is an error.
+SIGN_ARGS=()
+if ! security find-certificate -c "Orpheus Code Signing" >/dev/null 2>&1; then
+  echo "⚠︎  No 'Orpheus Code Signing' certificate found; signing ad-hoc."
+  echo "   You'll have to re-enter your Pandora password after each install."
+  echo "   Run ./scripts/make-signing-cert.sh once to fix that."
+  SIGN_ARGS=(CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Automatic)
+fi
+
 echo "▶︎ Building PianobarGUI (Release)"
 xcodebuild \
     -project PianobarGUI.xcodeproj \
@@ -40,6 +54,7 @@ xcodebuild \
     -destination 'platform=macOS' \
     -configuration Release \
     -derivedDataPath "$DERIVED" \
+    ${SIGN_ARGS[@]+"${SIGN_ARGS[@]}"} \
     build >/dev/null
 
 [ -d "$BUILT_APP" ] || { echo "Built app not found at $BUILT_APP" >&2; exit 1; }
