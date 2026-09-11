@@ -208,6 +208,28 @@ struct StationsSidebarView: View {
         switchTo(station)
     }
 
+    /// Select a station, choosing the form pianobar can actually parse right
+    /// now.
+    ///
+    /// `s<N>` is a *command*: pianobar reads `s`, opens its `Select station:`
+    /// prompt, and takes the rest of the line as the answer. But when pianobar
+    /// is *already* sitting at that prompt — at startup before anything plays,
+    /// or right after deleting the station it was playing — there is no command
+    /// to read, so the whole `s29` lands in the prompt as literal text, fails
+    /// to match, and pianobar re-prompts and then swallows everything sent
+    /// afterwards.
+    ///
+    /// `hasLiveSong` is the app's only signal for which state pianobar is in:
+    /// it flips on the first real `songstart` and so is false exactly while
+    /// pianobar is waiting at its opening prompt.
+    private func selectStation(index: Int) async throws {
+        if state.hasLiveSong {
+            try await ctrl.switchStation(index: index)
+        } else {
+            try await ctrl.selectStationAtPrompt(index: index)
+        }
+    }
+
     private func switchTo(_ station: Station) {
         guard let idx = state.stations.firstIndex(where: { $0.id == station.id })
         else { return }
@@ -219,19 +241,7 @@ struct StationsSidebarView: View {
         lastSwitchRequestID = station.id
         lastSwitchRequestDate = now
 
-        // Before pianobar's first songstart it's still sitting at the
-        // "Select station:" prompt, which wants bare digits rather than the
-        // runtime `s<N>` command. `currentSong` can't answer that question —
-        // it's pre-populated from the previous session's snapshot — so ask
-        // whether a real songstart has arrived this session.
-        let isFirst = !state.hasLiveSong
-        Task {
-            if isFirst {
-                try? await ctrl.selectStationAtPrompt(index: idx)
-            } else {
-                try? await ctrl.switchStation(index: idx)
-            }
-        }
+        Task { try? await selectStation(index: idx) }
     }
 
     /// Pianobar's `r` renames the *currently playing* station, so for any
@@ -314,7 +324,7 @@ struct StationsSidebarView: View {
         while Date() < deadline {
             if let idx = state.stations.firstIndex(where: { $0.name == name }),
                state.currentStation?.name != name {
-                try? await ctrl.switchStation(index: idx)
+                try? await selectStation(index: idx)
                 return
             }
             // Already back where we started — nothing to do.
@@ -336,7 +346,7 @@ struct StationsSidebarView: View {
         guard let idx = state.stations.firstIndex(where: { $0.id == station.id })
         else { return false }
         do {
-            try await ctrl.switchStation(index: idx)
+            try await selectStation(index: idx)
         } catch {
             state.setErrorBanner("Couldn't switch to \"\(station.name)\", so the \(action) was cancelled.")
             return false
