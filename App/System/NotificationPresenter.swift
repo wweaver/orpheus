@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import UserNotifications
 import Combine
 import PianobarCore
@@ -8,7 +9,7 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
     private let state: PlaybackState
     private let ctrl: PianobarCtrl
     private var subs = Set<AnyCancellable>()
-    private var lastSongTitleFired: String?
+    private var lastSongKeyFired: String?
 
     init(state: PlaybackState, ctrl: PianobarCtrl) {
         self.state = state
@@ -40,9 +41,13 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
     private func observeSongChanges() {
         state.$currentSong
             .sink { [weak self] song in
-                guard let self, let song,
-                      song.title != self.lastSongTitleFired else { return }
-                self.lastSongTitleFired = song.title
+                // Dedupe on title *and* artist: two different tracks sharing a
+                // title (covers, remixes, live versions) used to suppress each
+                // other's notification.
+                guard let self, let song else { return }
+                let key = "\(song.title)\u{1}\(song.artist)"
+                guard key != self.lastSongKeyFired else { return }
+                self.lastSongKeyFired = key
                 self.fire(for: song)
             }
             .store(in: &subs)
@@ -81,6 +86,10 @@ final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
             case "love": try? await self.ctrl.love()
             case "ban":  try? await self.ctrl.ban()
             case "skip": try? await self.ctrl.next()
+            case UNNotificationDefaultActionIdentifier:
+                // Clicking the banner itself brings the app forward.
+                NSApp.activate(ignoringOtherApps: true)
+                NSApp.windows.first { $0.canBecomeMain }?.makeKeyAndOrderFront(nil)
             default: break
             }
             completionHandler()

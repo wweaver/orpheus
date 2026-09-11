@@ -294,7 +294,7 @@ If `PianobarProcessTests.testStartsMockAndReceivesLoginEvent` now fails, the sup
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/williamweaver/git/pianobar-gui
+cd "$(git rev-parse --show-toplevel)"
 git add Packages/PianobarCore/Sources/PianobarCore/Pianobar/PianobarProcess.swift \
         Packages/PianobarCore/Tests/PianobarCoreTests/PianobarProcessSupervisionTests.swift
 git commit -m "Supervise pianobar with exponential-backoff restart and failure stream"
@@ -357,7 +357,7 @@ struct PianobarGUIApp: App {
 - [ ] **Step 3: Build**
 
 ```bash
-cd /Users/williamweaver/git/pianobar-gui
+cd "$(git rev-parse --show-toplevel)"
 xcodegen generate
 xcodebuild -project PianobarGUI.xcodeproj -scheme PianobarGUI -destination 'platform=macOS' build 2>&1 | tail -5
 ```
@@ -994,7 +994,7 @@ public func dismissErrorBanner() {
 
 ```bash
 cd Packages/PianobarCore && swift test 2>&1 | tail -3
-cd /Users/williamweaver/git/pianobar-gui
+cd "$(git rev-parse --show-toplevel)"
 xcodegen generate
 xcodebuild -project PianobarGUI.xcodeproj -scheme PianobarGUI -destination 'platform=macOS' build 2>&1 | tail -5
 ```
@@ -1341,7 +1341,7 @@ watchSupervisor(proc, state: state)
 
 ```bash
 cd Packages/PianobarCore && swift test 2>&1 | tail -3
-cd /Users/williamweaver/git/pianobar-gui
+cd "$(git rev-parse --show-toplevel)"
 xcodegen generate
 xcodebuild -project PianobarGUI.xcodeproj -scheme PianobarGUI -destination 'platform=macOS' build 2>&1 | tail -5
 ```

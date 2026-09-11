@@ -61,14 +61,16 @@ final class EventParserTests: XCTestCase {
     func testUserLoginSuccess() throws {
         let payload = try loadFixture("userlogin_ok")
         let event = EventParser.parse(eventType: "userlogin", payload: payload)
-        guard case .userLogin(let success, _) = event else { return XCTFail() }
+        guard case .userLogin(let result) = event else { return XCTFail() }
+        let success = result.isSuccess
         XCTAssertTrue(success)
     }
 
     func testUserLoginFailure() throws {
         let payload = try loadFixture("userlogin_fail")
         let event = EventParser.parse(eventType: "userlogin", payload: payload)
-        guard case .userLogin(let success, let message) = event else { return XCTFail() }
+        guard case .userLogin(let result) = event else { return XCTFail() }
+        let (success, message) = (result.isSuccess, result.message)
         XCTAssertFalse(success)
         XCTAssertEqual(message, "Invalid login")
     }

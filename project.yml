@@ -31,7 +31,12 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: YES
         ENABLE_HARDENED_RUNTIME: YES
-        CODE_SIGN_STYLE: Automatic
+        # Ad-hoc by default so a fresh clone builds anywhere, including
+        # straight from Xcode. install.sh overrides this with the stable
+        # "Orpheus Code Signing" identity when that certificate is present —
+        # see scripts/make-signing-cert.sh for why that matters.
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
         DEVELOPMENT_TEAM: ""
         SWIFT_VERSION: 5.9
         MACOSX_DEPLOYMENT_TARGET: "14.0"

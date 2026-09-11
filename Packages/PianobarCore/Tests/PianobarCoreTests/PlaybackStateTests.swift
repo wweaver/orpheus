@@ -40,7 +40,7 @@ final class PlaybackStateTests: XCTestCase {
         await waitUntil { state.currentSong?.title == "A" }
         cont.yield(.songStart(b))
         await waitUntil { state.currentSong?.title == "B" }
-        XCTAssertEqual(state.history.map(\.title), ["A"])
+        XCTAssertEqual(state.history.map(\.song.title), ["A"])
         cont.finish()
     }
 
@@ -59,7 +59,7 @@ final class PlaybackStateTests: XCTestCase {
     func testUserLoginFailureClearsAuth() async {
         let (stream, cont) = makeEventStream()
         let state = PlaybackState(events: stream)
-        cont.yield(.userLogin(success: false, message: "Invalid login"))
+        cont.yield(.userLogin(LoginResult(failure: .credentials, message: "Invalid login")))
         await waitUntil { state.authFailure != nil }
         XCTAssertEqual(state.authFailure, "Invalid login")
         cont.finish()

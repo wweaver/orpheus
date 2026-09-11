@@ -36,19 +36,51 @@ final class PianobarCtrlTests: XCTestCase {
 
         let ctrl = PianobarCtrl(fifoPath: fifoURL.path)
         try await ctrl.play()
+        try await ctrl.pause()
+        try await ctrl.togglePlay()
         try await ctrl.next()
         try await ctrl.love()
         try await ctrl.ban()
         try await ctrl.tired()
         try await ctrl.bookmarkSong()
         try await ctrl.switchStation(index: 3)
-        try await ctrl.setVolume(75)  // intentional no-op; macOS volume is used.
         await ctrl.close()
 
         await fulfillment(of: [exp], timeout: 2)
         let result = try await reader.value
-        // Exact byte sequence pianobar expects. setVolume writes nothing
-        // because pianobar's FIFO has no absolute-volume command.
-        XCTAssertEqual(result, "p\nn\n+\n-\nt\nb\ns3\n")
+        // Exact byte sequence pianobar expects. There is no volume command:
+        // pianobar's FIFO has only relative steps, so the app drives macOS
+        // output volume directly instead.
+        // `P` and `S` are pianobar's explicit play and pause; `p` is the
+        // toggle. The transport uses the explicit pair so the app's play state
+        // can't drift out of step with pianobar's.
+        XCTAssertEqual(result, "P\nS\np\nn\n+\n-\nt\nb\ns3\n")
+    }
+
+    /// pianobar reads a command as a single character and then reads the rest
+    /// of that same line as the answer to whatever prompt the command opens.
+    /// Putting the answer on its own line means the newline gets consumed as
+    /// the answer instead — which is how `d\n` silently declined
+    /// `Really delete "..."? [yN]` and deleted nothing.
+    func testPromptAnsweringCommandsKeepTheAnswerOnTheCommandLine() async throws {
+        let exp = expectation(description: "reader done")
+        let reader = readAllBytes(exp)
+
+        let ctrl = PianobarCtrl(fifoPath: fifoURL.path)
+        try await ctrl.deleteStation()
+        try await ctrl.renameStation("Chill Radio")
+        try await ctrl.createStationFromSearch("Bon Iver")
+        await ctrl.close()
+
+        await fulfillment(of: [exp], timeout: 2)
+        let result = try await reader.value
+        XCTAssertEqual(result, """
+        dy
+        rChill Radio
+        cs
+        Bon Iver
+        0
+
+        """)
     }
 }

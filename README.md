@@ -5,7 +5,8 @@ Spiritual successor to [Hermes](https://hermesapp.org/), which doesn't run on
 modern macOS anymore.
 
 Menu-bar presence, Now Playing widget, media-key control, notifications,
-station list, thumbs / tired / bookmark, history, auto-resume of last station,
+station list with filter, thumbs / tired / bookmark, played-song history,
+volume, global and in-app keyboard shortcuts, auto-resume of last station,
 and an experimental pause-on-quit / resume-on-launch mode.
 
 ## Screenshots
@@ -29,14 +30,44 @@ from a full now-playing card down to a small transport strip.
 
 <img src="docs/screenshots/menu-bar.png" alt="Menu bar dropdown showing Now Playing title, Show Stations, Show Preferences, Quit, and a scrollable station list" width="220">
 
+## Keyboard shortcuts
+
+In-app, under the **Controls** menu:
+
+| Action | Shortcut |
+| --- | --- |
+| Play / Pause | ⌘⇧P |
+| Next Song | ⌘⇧N |
+| Thumbs Up / Down | ⌘⇧U / ⌘⇧D |
+| Tired of Song | ⌘⇧T |
+| Bookmark Song | ⌘⇧B |
+
+System-wide hotkeys (off by default) are bound in **Preferences → Hotkeys**:
+click a shortcut, press the keys, include at least one modifier.
+
 ## Install (personal use)
 
 ```bash
 git clone git@github.com:wweaver/orpheus.git
 cd orpheus
 brew install pianobar xcodegen
+./scripts/make-signing-cert.sh   # once — see below
 ./scripts/install.sh
 ```
+
+`scripts/make-signing-cert.sh` creates a self-signed code-signing certificate
+in your login keychain. Without it the app is signed ad-hoc, which gives it a
+designated requirement of a bare code hash that changes on every build — so
+macOS treats each reinstall as a different app, the keychain stops handing over
+your saved Pandora credentials, and you have to sign in again after every
+install.
+
+It's optional. The project signs ad-hoc by default, so a fresh clone builds
+anywhere including straight from Xcode; `install.sh` uses the stable identity
+only when the certificate exists. The trade-off is that binding credentials to
+a stable identity also means anything running code as you could sign a bundle
+claiming the same identifier and read the stored password without a prompt —
+reasonable for a personal-use app, but skip the script if you'd rather not.
 
 `scripts/install.sh` builds Release, drops `Orpheus.app` into `~/Applications/`,
 and launches it. After that, find it via Spotlight (`⌘Space` → "Orpheus"),
@@ -71,7 +102,7 @@ docs/superpowers/       Design spec, implementation plans, QA checklists.
 ```bash
 brew install xcodegen
 xcodegen generate
-cd Packages/PianobarCore && swift test     # 32 tests
+cd Packages/PianobarCore && swift test     # 55 tests
 open ../../PianobarGUI.xcodeproj           # to develop in Xcode
 ```
 

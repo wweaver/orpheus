@@ -6,61 +6,165 @@ struct NowPlayingView: View {
     @Environment(\.openURL) private var openURL
     @ObservedObject var state: PlaybackState
     let ctrl: PianobarCtrl
-    var windowSize: CGSize = .zero
+    /// Space this view actually has, i.e. the window minus the sidebar and the
+    /// history drawer. Sizing against the raw window size is what let the
+    /// volume slider slide under the drawer.
+    var availableSize: CGSize = .zero
+    /// False when the current output device exposes no settable main volume
+    /// (some aggregate and HDMI devices), so we hide the slider rather than
+    /// show a dead control.
+    @State private var volumeAvailable: Bool = false
 
     private var showArt: Bool {
-        windowSize.height >= 430
+        availableSize.height >= 430
     }
     private var showHeader: Bool {
-        windowSize.height >= 190
+        availableSize.height >= 190
+    }
+    /// Same progressive-disclosure idea as the art and header: the volume
+    /// slider is the first thing to go when the window gets short.
+    private var showVolume: Bool {
+        availableSize.height >= 300 && volumeAvailable
+    }
+
+    /// Vertical space the pinned controls need, so the art can claim the rest
+    /// without pushing them off.
+    private var controlsHeight: CGFloat {
+        34 /* transport */ + 34 /* progress */ + (showVolume ? 30 : 0) + 34 /* padding + spacing */
+    }
+
+    /// Art grows with the window now that the window itself isn't capped,
+    /// while leaving room for the metadata and the pinned controls below it.
+    private var artMaxWidth: CGFloat {
+        let byWidth = availableSize.width - 48
+        let byHeight = availableSize.height - controlsHeight - 96 /* metadata block */
+        return max(120, min(min(byWidth, byHeight), 420))
     }
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 12) {
-                if showArt {
-                    albumArt
-                        .aspectRatio(1, contentMode: .fit)
-                        .frame(maxWidth: 240)
+        // Two sections: art and metadata flex and can scroll, the controls are
+        // pinned. Previously everything shared one ScrollView, so as the window
+        // got shorter the last item — the volume slider — was simply clipped
+        // behind the history drawer.
+        VStack(spacing: 0) {
+            if showArt || showHeader {
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 12) {
+                        if showArt {
+                            albumArt
+                                .aspectRatio(1, contentMode: .fit)
+                                .frame(maxWidth: artMaxWidth)
+                        }
+                        if showHeader { metadata }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .frame(maxWidth: .infinity)
                 }
-
-                if showHeader {
-                    if let song = state.currentSong {
-                        songTitle(song)
-                        artistButton(song)
-                        Link(song.album, destination: song.albumDetailURL ?? pandoraAlbumURL(for: song))
-                            .font(.caption)
-                            .buttonStyle(.plain)
-                            .foregroundStyle(.tertiary)
-                            .lineLimit(1)
-                            .help("Open album on Pandora")
-                    } else {
-                        Text("Not playing").foregroundStyle(.secondary)
-                    }
-                }
-
-                HStack(spacing: 8) {
-                    transportButton(systemName: state.isPlaying ? "pause.fill" : "play.fill") {
-                        let target = !state.isPlaying
-                        Task { await state.setPlayback(target, via: ctrl) }
-                    }
-                    transportButton(systemName: "forward.fill") {
-                        Task { try? await ctrl.next() }
-                    }
-                    transportButton(systemName: "hand.thumbsdown") {
-                        Task { try? await ctrl.ban() }
-                    }
-                    transportButton(systemName: "hand.thumbsup") {
-                        Task { try? await ctrl.love() }
-                    }
-                }
-
-                progressBar
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 16)
-            .frame(maxWidth: .infinity)
+
+            controls
+        }
+        .onAppear {
+            // Seed from the actual device so the slider doesn't start at a
+            // made-up 50 and jump when first touched.
+            if let level = SystemVolume.read() {
+                state.volume = level
+                volumeAvailable = true
+            } else {
+                volumeAvailable = false
+            }
+        }
+    }
+
+    /// Title / artist / album / station read as one block, so they get tight
+    /// spacing; the 12pt gap belongs *between* groups, not between every line
+    /// of the same one.
+    @ViewBuilder
+    private var metadata: some View {
+        VStack(spacing: 2) {
+            if let song = state.currentSong {
+                songTitle(song)
+                artistButton(song)
+                Link(song.album, destination: song.albumDetailURL ?? pandoraAlbumURL(for: song))
+                    .font(.caption)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                    .help("Open album on Pandora")
+            } else {
+                Text("Not playing").foregroundStyle(.secondary)
+            }
+            stationLine
+                .padding(.top, 3)
+        }
+    }
+
+    private var controls: some View {
+        VStack(spacing: 10) {
+            transportRow
+            progressBar
+            if showVolume { volumeSlider }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, showArt || showHeader ? 12 : 10)
+        .padding(.bottom, 12)
+        .frame(maxWidth: .infinity)
+    }
+
+    private var transportRow: some View {
+        HStack(spacing: 8) {
+            transportButton(
+                systemName: state.isPlaying ? "pause.fill" : "play.fill",
+                label: state.isPlaying ? "Pause" : "Play"
+            ) {
+                let target = !state.isPlaying
+                Task { await state.setPlayback(target, via: ctrl) }
+            }
+            transportButton(systemName: "forward.fill", label: "Next song") {
+                Task { try? await ctrl.next() }
+            }
+            // Filled + tinted once the song is rated, so the user can tell
+            // whether they already voted on it.
+            transportButton(
+                systemName: rating == .banned ? "hand.thumbsdown.fill" : "hand.thumbsdown",
+                label: "Thumbs down",
+                isOn: rating == .banned,
+                tint: .red
+            ) {
+                Task { try? await ctrl.ban() }
+            }
+            transportButton(
+                systemName: rating == .loved ? "hand.thumbsup.fill" : "hand.thumbsup",
+                label: "Thumbs up",
+                isOn: rating == .loved,
+                tint: .green
+            ) {
+                Task { try? await ctrl.love() }
+            }
+            overflowMenu
+        }
+    }
+
+    /// With the sidebar collapsed there was no indication of which station was
+    /// playing. Doubles as the buffering indicator: `stationFetchPlaylist` was
+    /// parsed and then discarded, so a station switch showed nothing at all for
+    /// the several seconds it takes.
+    @ViewBuilder
+    private var stationLine: some View {
+        if state.isBuffering {
+            HStack(spacing: 5) {
+                ProgressView().controlSize(.mini)
+                Text("Buffering…")
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+        } else if let station = state.currentStation {
+            Text(station.name)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .accessibilityLabel("Station: \(station.name)")
         }
     }
 
@@ -91,13 +195,90 @@ struct NowPlayingView: View {
         }
     }
 
-    private func transportButton(systemName: String, action: @escaping () -> Void) -> some View {
+    private var rating: Rating { state.currentSong?.rating ?? .unrated }
+
+    /// Drives macOS output volume. pianobar's FIFO has no absolute-volume
+    /// command, so there is nothing to send it here.
+    @ViewBuilder
+    private var volumeSlider: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "speaker.fill")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+            Slider(
+                value: Binding(
+                    get: { Double(state.volume) },
+                    set: { newValue in
+                        let level = Int(newValue.rounded())
+                        state.volume = level
+                        SystemVolume.set(level)
+                    }
+                ),
+                in: 0...100
+            )
+            Image(systemName: "speaker.wave.3.fill")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Volume")
+        .accessibilityValue("\(state.volume) percent")
+    }
+
+    private func transportButton(
+        systemName: String,
+        label: String,
+        isOn: Bool = false,
+        tint: Color = .accentColor,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.body)
                 .frame(width: 24, height: 24)
+                .foregroundStyle(isOn ? tint : Color.primary)
         }
         .buttonStyle(.bordered)
+        .disabled(state.currentSong == nil)
+        .help(label)
+        .accessibilityLabel(label)
+    }
+
+    /// Commands pianobar has always supported and PianobarCtrl has always
+    /// implemented, but which had no caller anywhere in the UI.
+    @ViewBuilder
+    private var overflowMenu: some View {
+        Menu {
+            Button("Tired of Song") { Task { try? await ctrl.tired() } }
+            Divider()
+            Button("Bookmark Song") { Task { try? await ctrl.bookmarkSong() } }
+            Button("Bookmark Artist") { Task { try? await ctrl.bookmarkArtist() } }
+            Divider()
+            Button("Create Station from Song") {
+                Task { try? await ctrl.createStationFromSong() }
+            }
+            Button("Create Station from Artist") {
+                Task { try? await ctrl.createStationFromArtist() }
+            }
+            if let song = state.currentSong {
+                Divider()
+                Button("Open in Pandora") {
+                    openURL(song.detailURL ?? pandoraAlbumURL(for: song))
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.body)
+                .frame(width: 24, height: 24)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .frame(width: 34)
+        .disabled(state.currentSong == nil)
+        .help("More actions")
+        .accessibilityLabel("More actions")
     }
 
     @ViewBuilder
@@ -116,7 +297,10 @@ struct NowPlayingView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 12)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Playback progress")
+            .accessibilityValue(
+                "\(format(min(state.progressSeconds, song.durationSeconds))) of \(format(song.durationSeconds))")
         }
     }
 
@@ -272,10 +456,20 @@ struct NowPlayingView: View {
     @ViewBuilder
     private var albumArt: some View {
         if let url = state.currentSong?.coverArtURL {
-            AsyncImage(url: url) { image in
-                image.resizable().scaledToFit()
-            } placeholder: {
-                placeholderArt
+            // Use the phase-based initializer so a failed load falls back to
+            // the placeholder. The closure-pair form treats failure the same as
+            // "still loading", so art that 404s span forever.
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().scaledToFit()
+                case .failure:
+                    placeholderArt
+                case .empty:
+                    placeholderArt.overlay { ProgressView().controlSize(.small) }
+                @unknown default:
+                    placeholderArt
+                }
             }
         } else {
             placeholderArt

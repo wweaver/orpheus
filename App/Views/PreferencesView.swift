@@ -69,12 +69,17 @@ struct PreferencesView: View {
     private var hotkeys: some View {
         tab {
             Form {
-                Text("Hotkey configuration UI coming soon.")
-                Text("To bind a hotkey manually, write "
-                     + "`<keyCode>,<modifierMask>` to the "
-                     + "`hotkey.<action>` UserDefaults key with the "
-                     + "`defaults write` command.")
-                    .font(.caption).foregroundStyle(.secondary)
+                Section {
+                    HotkeyRecorder(title: "Play / Pause", prefsKey: "hotkey.playPause")
+                    HotkeyRecorder(title: "Next Song", prefsKey: "hotkey.next")
+                    HotkeyRecorder(title: "Thumbs Up", prefsKey: "hotkey.love")
+                    HotkeyRecorder(title: "Thumbs Down", prefsKey: "hotkey.ban")
+                } footer: {
+                    Text("These work from any app. Click a shortcut, press the "
+                         + "keys you want, and include at least one modifier "
+                         + "(⌘, ⌥, ⌃ or ⇧). Press Escape to cancel.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             .formStyle(.grouped)
         }

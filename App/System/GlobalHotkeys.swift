@@ -21,6 +21,7 @@ final class GlobalHotkeys {
     private var handlers: [Action: EventHotKeyRef] = [:]
     private var handlerRef: EventHandlerRef?
     private var defaultsObserver: NSObjectProtocol?
+    private var lastBindings: [String: String] = [:]
     private static var shared: GlobalHotkeys?  // for Carbon C callback
 
     init(state: PlaybackState, ctrl: PianobarCtrl) {
@@ -29,11 +30,32 @@ final class GlobalHotkeys {
         GlobalHotkeys.shared = self
         installCarbonHandler()
         reloadAllBindings()
+        lastBindings = currentBindings()
+        // `didChangeNotification` fires for *any* defaults write, and this app
+        // writes defaults every second or two (session snapshot, last station).
+        // Re-registering all four Carbon hotkeys that often is wasted work and
+        // drops any keypress landing in the re-registration window, so only act
+        // when a hotkey binding actually changed.
         defaultsObserver = NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.reloadAllBindings() }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let bindings = self.currentBindings()
+                guard bindings != self.lastBindings else { return }
+                self.lastBindings = bindings
+                self.reloadAllBindings()
+            }
         }
+    }
+
+    /// Raw encoded binding string per action, used to detect real changes.
+    private func currentBindings() -> [String: String] {
+        var out: [String: String] = [:]
+        for action in Action.allCases {
+            out[action.rawValue] = UserDefaults.standard.string(forKey: action.prefsKey) ?? ""
+        }
+        return out
     }
 
     func invalidate() {

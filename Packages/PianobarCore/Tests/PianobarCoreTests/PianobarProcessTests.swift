@@ -45,7 +45,7 @@ final class PianobarProcessTests: XCTestCase {
 
         var got: PianobarEvent?
         for await e in bridge.events { got = e; break }
-        XCTAssertEqual(got, .userLogin(success: true, message: "OK"))
+        XCTAssertEqual(got, .userLogin(LoginResult(failure: nil, message: "OK")))
 
         try await proc.stop()
         await bridge.stop()

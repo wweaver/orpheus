@@ -13,9 +13,18 @@ extension PlaybackState {
     /// sends a command when a change is actually needed, and only updates the
     /// published state once the command has gone through.
     func setPlayback(_ target: Bool, via ctrl: PianobarCtrl) async {
-        guard isPlaying != target else { return }
         do {
-            try await ctrl.togglePlay()
+            // Explicit `P`/`S` rather than the `p` toggle. Both are idempotent,
+            // so there's no need to guard on `isPlaying != target` — and that
+            // guard was itself a trap: once the guessed state drifted from
+            // pianobar's real one, it made the button a no-op in exactly the
+            // direction the user wanted, permanently. Sending the command
+            // unconditionally resynchronises instead.
+            if target {
+                try await ctrl.play()
+            } else {
+                try await ctrl.pause()
+            }
             setPlaying(target)
         } catch {
             // The FIFO write didn't reach pianobar; leave the UI reflecting the
