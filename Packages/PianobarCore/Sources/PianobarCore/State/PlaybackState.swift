@@ -91,7 +91,12 @@ public final class PlaybackState: ObservableObject {
             // The old code resolved solely from `currentSong?.stationName`,
             // which evaluated to nil whenever no song was playing and silently
             // wiped the sidebar's now-playing indicator.
-            currentStation = previousName.flatMap { name in stations.first { $0.name == name } }
+            // A live song's station is authoritative; fall back to whatever was
+            // selected before, then to keeping what we have.
+            currentStation = (hasLiveSong
+                    ? stations.first { $0.name == currentSong?.stationName }
+                    : nil)
+                ?? previousName.flatMap { name in stations.first { $0.name == name } }
                 ?? stations.first { $0.name == currentSong?.stationName }
                 ?? currentStation
         case .userLogin(let ok, let msg):

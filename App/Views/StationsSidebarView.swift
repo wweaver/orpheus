@@ -11,6 +11,10 @@ struct StationsSidebarView: View {
     @State private var stationToRename: Station?
     @State private var lastSwitchRequestID: String?
     @State private var lastSwitchRequestDate: Date = .distantPast
+    /// How long to wait for pianobar to confirm a station switch before
+    /// abandoning a destructive follow-up command.
+    private static let stationSwitchTimeout: TimeInterval = 10
+
     @State private var lastClickedID: String?
     @State private var lastClickedAt: Date = .distantPast
 
@@ -166,7 +170,12 @@ struct StationsSidebarView: View {
         lastSwitchRequestID = station.id
         lastSwitchRequestDate = now
 
-        let isFirst = state.currentSong == nil
+        // Before pianobar's first songstart it's still sitting at the
+        // "Select station:" prompt, which wants bare digits rather than the
+        // runtime `s<N>` command. `currentSong` can't answer that question —
+        // it's pre-populated from the previous session's snapshot — so ask
+        // whether a real songstart has arrived this session.
+        let isFirst = !state.hasLiveSong
         Task {
             if isFirst {
                 try? await ctrl.selectStationAtPrompt(index: idx)
@@ -177,35 +186,52 @@ struct StationsSidebarView: View {
     }
 
     /// Pianobar's `r` renames the *currently playing* station, so for any
-    /// other station we switch first, settle briefly, then send the rename.
-    /// Mirrors the pattern used by `delete(_:)` below.
+    /// other station we have to switch to it first.
     private func rename(_ station: Station, to newName: String) {
         let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed != station.name else { return }
         Task {
-            if state.currentStation?.id != station.id {
-                guard let idx = state.stations.firstIndex(where: { $0.id == station.id })
-                else { return }
-                try? await ctrl.switchStation(index: idx)
-                try? await Task.sleep(nanoseconds: 600_000_000)
-            }
+            guard await makeCurrent(station, action: "rename") else { return }
             try? await ctrl.renameStation(trimmed)
         }
     }
 
     /// Pianobar's `d` deletes the *currently playing* station, so to remove
-    /// any other station we have to switch to it first, give pianobar a
-    /// moment to settle, then send the delete.
+    /// any other station we have to switch to it first.
     private func delete(_ station: Station) {
         Task {
-            if state.currentStation?.id != station.id {
-                guard let idx = state.stations.firstIndex(where: { $0.id == station.id })
-                else { return }
-                try? await ctrl.switchStation(index: idx)
-                try? await Task.sleep(nanoseconds: 600_000_000)
-            }
+            guard await makeCurrent(station, action: "delete") else { return }
             try? await ctrl.deleteStation()
         }
+    }
+
+    /// Switch to `station` and wait for pianobar to confirm it actually
+    /// happened. Returns false (and shows a banner) if it didn't.
+    ///
+    /// This used to be a flat `Task.sleep(600ms)`. A station switch needs a
+    /// Pandora round trip, and on a slow connection it takes far longer than
+    /// that — so the following `d` landed while pianobar was still on the
+    /// *previous* station and deleted the wrong one, permanently and with no
+    /// undo. Wait for the state to actually reflect the switch instead.
+    private func makeCurrent(_ station: Station, action: String) async -> Bool {
+        if state.currentStation?.id == station.id { return true }
+        guard let idx = state.stations.firstIndex(where: { $0.id == station.id })
+        else { return false }
+        do {
+            try await ctrl.switchStation(index: idx)
+        } catch {
+            state.setErrorBanner("Couldn't switch to \"\(station.name)\", so the \(action) was cancelled.")
+            return false
+        }
+
+        let deadline = Date().addingTimeInterval(Self.stationSwitchTimeout)
+        while Date() < deadline {
+            if state.currentStation?.id == station.id { return true }
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+        state.setErrorBanner(
+            "\"\(station.name)\" didn't start in time, so the \(action) was cancelled. Try again.")
+        return false
     }
 }
 

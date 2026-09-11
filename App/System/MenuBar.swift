@@ -111,7 +111,11 @@ private struct MenuBarCommands: View {
         Menu("Stations") {
             ForEach(Array(state.stations.enumerated()), id: \.element.id) { idx, station in
                 Button {
-                    let isFirst = state.currentSong == nil
+                    // See StationsSidebarView.switchTo — `currentSong` is
+                    // restored from the previous session's snapshot, so only
+                    // `hasLiveSong` tells us pianobar is past its startup
+                    // "Select station:" prompt.
+                    let isFirst = !state.hasLiveSong
                     Task {
                         if isFirst {
                             try? await ctrl.selectStationAtPrompt(index: idx)

@@ -61,20 +61,59 @@ final class AppBootstrap: ObservableObject {
         UserDefaults.standard.removeObject(forKey: Prefs.Keys.lastStationName)
         UserDefaults.standard.removeObject(forKey: Prefs.Keys.lastStationId)
         SessionStore.clear()
-        stationTracker?.cancel()
-        stationTracker = nil
-        snapshotSubs.removeAll()
         startupError = nil
         startInvoked = false  // allow sign-in flow to call start() again.
         Task {
-            try? await process?.stop()
-            await bridge?.stop()
-            playbackState = nil
-            ctrl = nil
-            bridge = nil
-            process = nil
+            await teardownPlaybackStack()
+            removeSystemObservers()
             clearPlaybackIntegrations()
             needsLogin = true
+        }
+    }
+
+    /// Stop pianobar and the event bridge and drop all derived state. Shared by
+    /// sign-out and by `launch`, which must not build a second stack on top of
+    /// a live one.
+    private func teardownPlaybackStack() async {
+        supervisorWatch?.cancel()
+        supervisorWatch = nil
+        stationTracker?.cancel()
+        stationTracker = nil
+        snapshotSubs.removeAll()
+
+        // When `keepPianobarAlive` reattached us to an existing pianobar there
+        // is no PianobarProcess to stop, so `process?.stop()` was a no-op and
+        // music kept playing forever after sign-out — while Preferences
+        // promises "Signing out stops playback". Quit it over the FIFO and
+        // clear the pidfile so the orphan isn't re-adopted next launch.
+        if process == nil {
+            Self.writeFifoSync("q\n", at: fifoPath)
+            PianobarPidFile.clear(at: pidFilePath)
+        } else {
+            try? await process?.stop()
+        }
+        await bridge?.stop()
+
+        playbackState = nil
+        ctrl = nil
+        bridge = nil
+        process = nil
+    }
+
+    /// The sleep/lock observers outlive a sign-out otherwise, and keep writing
+    /// `p` to a now-stale FIFO path on every sleep or screen lock.
+    private func removeSystemObservers() {
+        if let obs = willSleepObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(obs)
+            willSleepObserver = nil
+        }
+        if let obs = screenLockedObserver {
+            DistributedNotificationCenter.default().removeObserver(obs)
+            screenLockedObserver = nil
+        }
+        if let obs = willTerminateObserver {
+            NotificationCenter.default.removeObserver(obs)
+            willTerminateObserver = nil
         }
     }
 
@@ -144,8 +183,12 @@ final class AppBootstrap: ObservableObject {
               let state = playbackState,
               state.isPlaying
         else { return }
-        Self.writeFifoSync("p\n", at: fifoPath)
-        state.setPlaying(false)
+        // Only reflect the pause in the UI if pianobar actually got the
+        // command, so the transport doesn't desync into a state where the
+        // button does nothing.
+        if Self.writeFifoSync("p\n", at: fifoPath) {
+            state.setPlaying(false)
+        }
     }
 
     private func handleWillTerminate() {
@@ -170,12 +213,13 @@ final class AppBootstrap: ObservableObject {
         SessionStore.save(snapshot)
 
         if state.isPlaying {
-            Self.writeFifoSync("p\n", at: fifoPath)
-            // Record that WE explicitly paused pianobar. The next launch
-            // looks at this flag (not the snapshot) to decide whether to
-            // toggle on attach. Without this we don't know if pianobar
-            // is paused — e.g. SIGTERM bypasses willTerminate entirely.
-            UserDefaults.standard.set(true, forKey: Prefs.Keys.pianobarWasPaused)
+            // Record that WE explicitly paused pianobar, and only if the write
+            // actually landed. The next launch looks at this flag (not the
+            // snapshot) to decide whether to toggle on attach — claiming a
+            // pause that never happened made that launch send a blind toggle
+            // and *stop* the music the user expected to still be playing.
+            let paused = Self.writeFifoSync("p\n", at: fifoPath)
+            UserDefaults.standard.set(paused, forKey: Prefs.Keys.pianobarWasPaused)
         } else {
             UserDefaults.standard.set(false, forKey: Prefs.Keys.pianobarWasPaused)
         }
@@ -184,12 +228,19 @@ final class AppBootstrap: ObservableObject {
     /// Synchronous write of a short command directly to pianobar's FIFO.
     /// Safe to call from notification observers / terminate hooks where we
     /// can't await the PianobarCtrl actor.
-    private static func writeFifoSync(_ command: String, at path: String) {
+    /// Returns whether the command actually reached the FIFO. Callers record
+    /// state based on this: `O_NONBLOCK` open returns ENXIO when pianobar isn't
+    /// reading, and the write itself can fail or come up short, so "we tried"
+    /// is not the same as "pianobar is now paused".
+    @discardableResult
+    private static func writeFifoSync(_ command: String, at path: String) -> Bool {
         let fd = open(path, O_WRONLY | O_NONBLOCK)
-        guard fd >= 0 else { return }
+        guard fd >= 0 else { return false }
         defer { close(fd) }
-        _ = command.withCString { ptr in
-            Darwin.write(fd, ptr, strlen(ptr))
+        return command.withCString { ptr -> Bool in
+            let len = strlen(ptr)
+            let written = Darwin.write(fd, ptr, len)
+            return written == len
         }
     }
 
@@ -199,6 +250,13 @@ final class AppBootstrap: ObservableObject {
         // before creating new ones, so we don't leak the old GlobalHotkeys
         // instance and its registered Carbon event handler.
         clearPlaybackIntegrations()
+        // And tear down the process/bridge too. Without this, re-entering
+        // launch() unlinks and rebinds the event socket (orphaning the previous
+        // EventBridge, its fd and its accept task), re-mkfifos the control FIFO
+        // so the existing pianobar becomes uncommandable, and spawns a *second*
+        // pianobar — two audio streams playing different songs, only one of
+        // which responds to the UI.
+        await teardownPlaybackStack()
         try? FileManager.default.createDirectory(at: appSupportDir, withIntermediateDirectories: true)
         try? FileManager.default.createDirectory(at: configDir, withIntermediateDirectories: true)
 
@@ -225,7 +283,13 @@ final class AppBootstrap: ObservableObject {
         UserDefaults.standard.set(false, forKey: Prefs.Keys.pianobarWasPaused)
 
         // Resolve pianobar path. Dev builds use Homebrew.
-        let pianobarPath = resolvePianobarPath() ?? "/opt/homebrew/bin/pianobar"
+        guard let pianobarPath = resolvePianobarPath() else {
+            // Falling back to a hardcoded path that resolvePianobarPath just
+            // proved absent bought ~61s of silent backoff and then a generic
+            // "stopped responding". Say what's actually wrong.
+            startupError = "pianobar isn't installed. Install it with `brew install pianobar`, then click Retry."
+            return
+        }
 
         let eventBridgePath = PianobarCoreResources.eventBridgeScriptURL.path
 
@@ -255,11 +319,22 @@ final class AppBootstrap: ObservableObject {
 
         // Make FIFO
         unlink(fifoPath)
-        _ = mkfifo(fifoPath, 0o600)
+        if mkfifo(fifoPath, 0o600) != 0 {
+            startupError = "Couldn't create the pianobar control channel: \(String(cString: strerror(errno)))"
+            return
+        }
 
-        // Start event bridge
-        guard let b = try? EventBridge(socketPath: socketPath) else { return }
-        try? await b.start()
+        // Start event bridge. These failures used to be swallowed, which left
+        // playbackState nil and the UI spinning on "Starting…" forever with no
+        // error and no Retry button.
+        let b: EventBridge
+        do {
+            b = try EventBridge(socketPath: socketPath)
+            try await b.start()
+        } catch {
+            startupError = "Couldn't open the pianobar event channel: \(error.localizedDescription)"
+            return
+        }
         bridge = b
 
         // Wire up state. Pre-populate with the last saved snapshot (if any) so
@@ -285,7 +360,12 @@ final class AppBootstrap: ObservableObject {
             eventDebugLogURL: eventLogURL,
             pidFilePath: pidFilePath
         )
-        try? await proc.start()
+        do {
+            try await proc.start()
+        } catch {
+            startupError = "Couldn't start pianobar: \(error.localizedDescription)"
+            return
+        }
         process = proc
         watchSupervisor(proc, state: state)
 
@@ -390,19 +470,20 @@ final class AppBootstrap: ObservableObject {
         )
     }
 
+    /// Mirror the current station name into defaults so the next launch can
+    /// auto-resume it. Driven by the publisher rather than by a 2s polling loop
+    /// that ran for the app's whole lifetime and churned `UserDefaults` (which
+    /// in turn forced a global hotkey re-registration on every write).
     private func trackCurrentStation(_ state: PlaybackState) {
         stationTracker?.cancel()
-        stationTracker = Task { @MainActor [weak state] in
-            var lastSaved: String?
-            while !Task.isCancelled {
-                let name = state?.currentStation?.name
-                if let name, name != lastSaved {
-                    UserDefaults.standard.set(name, forKey: Prefs.Keys.lastStationName)
-                    lastSaved = name
-                }
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
+        stationTracker = nil
+        state.$currentStation
+            .compactMap { $0?.name }
+            .removeDuplicates()
+            .sink { name in
+                UserDefaults.standard.set(name, forKey: Prefs.Keys.lastStationName)
             }
-        }
+            .store(in: &snapshotSubs)
     }
 
     /// After pianobar sends its stations list, look up the saved station by
@@ -418,9 +499,14 @@ final class AppBootstrap: ObservableObject {
             let deadline = Date().addingTimeInterval(10)
             while Date() < deadline {
                 if let s = state, !s.stations.isEmpty {
-                    // Already playing a song (e.g. a previous session left
-                    // pianobar in runtime mode somehow) — nothing to do.
-                    if s.currentSong != nil { return }
+                    // pianobar has already started playing on its own (e.g. a
+                    // reattached session left it in runtime mode) — nothing to
+                    // do. Must test `hasLiveSong`, not `currentSong != nil`:
+                    // restoreSnapshotIfAny runs before this and populates
+                    // currentSong from the *previous* session's cache, so the
+                    // old check was always true and auto-resume silently never
+                    // fired after the first-ever launch.
+                    if s.hasLiveSong { return }
                     if let idx = s.stations.firstIndex(where: { $0.name == savedName }) {
                         try? await ctrl.selectStationAtPrompt(index: idx)
                     }
