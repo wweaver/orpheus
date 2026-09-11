@@ -28,6 +28,11 @@ struct MainWindowView: View {
     /// Tracks what the window width has already been adjusted for, so repeated
     /// `onChange` deliveries don't stack multiple resizes.
     @State private var widthIncludesSidebar: Bool?
+    /// True while the window frame is animating. The animation reports every
+    /// intermediate width to the GeometryReader, and the ones below
+    /// `collapseThreshold` would trip auto-collapse mid-flight and fight the
+    /// toggle that started it.
+    @State private var isAnimatingSidebar = false
 
     /// Space actually available to the player pane. `geo.size` is the whole
     /// split view including the sidebar and the history drawer, so passing it
@@ -57,12 +62,16 @@ struct MainWindowView: View {
         widthIncludesSidebar = wantsSidebar
         // Nothing to do on first observation — just record the starting state.
         guard previous != nil, let window else { return }
-        // Not animated: an animated resize reports intermediate widths to the
-        // GeometryReader, and the ones below `collapseThreshold` would trip
-        // auto-collapse mid-flight and fight the toggle that started it.
-        WindowResizer.adjustWidth(of: window,
-                                  by: wantsSidebar ? Self.sidebarWidth : -Self.sidebarWidth,
-                                  animated: false)
+        // Animated, and running alongside SwiftUI's own sidebar reveal so the
+        // two read as one motion. `isAnimatingSidebar` holds auto-collapse off
+        // for the duration; see that property.
+        isAnimatingSidebar = true
+        WindowResizer.adjustWidth(
+            of: window,
+            by: wantsSidebar ? Self.sidebarWidth : -Self.sidebarWidth
+        ) {
+            isAnimatingSidebar = false
+        }
     }
 
     var body: some View {
@@ -99,6 +108,7 @@ struct MainWindowView: View {
     }
 
     private func applyAutoCollapse(width: CGFloat) {
+        guard !isAnimatingSidebar else { return }
         if userOverrideRaw == "hidden" {
             if visibility != .detailOnly { setVisibilityWithoutResizing(.detailOnly) }
             return

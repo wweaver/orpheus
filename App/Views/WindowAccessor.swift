@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import QuartzCore
 
 /// Hands the enclosing `NSWindow` back to SwiftUI.
 ///
@@ -28,31 +29,66 @@ struct WindowAccessor: NSViewRepresentable {
 }
 
 enum WindowResizer {
-    /// Grow or shrink `window` horizontally by `delta`, keeping it on screen.
+    /// Duration of the window resize. Chosen to sit alongside SwiftUI's own
+    /// sidebar reveal so the two read as a single motion rather than a jump
+    /// followed by a slide.
+    static let sidebarAnimationDuration: TimeInterval = 0.25
+
+    /// Widen or narrow `window` by `delta`, moving the **left** edge.
     ///
-    /// Grows to the right where there's room, otherwise moves the window left
-    /// so the extra width stays on the visible screen. Shrinking always takes
-    /// the width off the right edge, so the window doesn't appear to jump.
-    static func adjustWidth(of window: NSWindow, by delta: CGFloat, animated: Bool = true) {
-        guard delta != 0 else { return }
+    /// The sidebar lives on the left, so growing that edge outward leaves the
+    /// detail pane at exactly the same place on screen — the sidebar simply
+    /// occupies space that didn't exist a moment ago. Growing the right edge
+    /// instead (the obvious implementation) shoves the player 220pt sideways
+    /// as the sidebar claims the left of the split, which is the bulk of the
+    /// jerkiness.
+    ///
+    /// Falls back to moving the right edge when there isn't room to the left,
+    /// e.g. the window is already against the edge of the screen.
+    static func adjustWidth(
+        of window: NSWindow,
+        by delta: CGFloat,
+        duration: TimeInterval = sidebarAnimationDuration,
+        completion: @escaping () -> Void = {}
+    ) {
+        guard delta != 0 else { completion(); return }
         let current = window.frame
         let visible = (window.screen ?? NSScreen.main)?.visibleFrame
 
         var target = current
         target.size.width = max(window.minSize.width, current.width + delta)
-        // Never exceed the screen.
         if let visible {
             target.size.width = min(target.size.width, visible.width)
         }
-        // Keep the title bar anchored: AppKit frames are bottom-left origin, so
-        // holding maxY fixed keeps the top edge where it was.
+        // AppKit frames are bottom-left origin, so holding maxY fixed keeps the
+        // title bar where it is.
         target.origin.y = current.maxY - target.height
 
-        if let visible, target.maxX > visible.maxX {
-            target.origin.x = max(visible.minX, visible.maxX - target.width)
+        // Move the left edge; the right edge stays put.
+        target.origin.x = current.maxX - target.width
+
+        if let visible {
+            // Not enough room on the left — take it from the right instead.
+            if target.minX < visible.minX {
+                target.origin.x = visible.minX
+            }
+            if target.maxX > visible.maxX {
+                target.origin.x = max(visible.minX, visible.maxX - target.width)
+            }
         }
 
-        guard target != current else { return }
-        window.setFrame(target, display: true, animate: animated)
+        guard target != current else { completion(); return }
+
+        guard duration > 0 else {
+            window.setFrame(target, display: true)
+            completion()
+            return
+        }
+
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = duration
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            window.animator().setFrame(target, display: true)
+        }, completionHandler: completion)
     }
 }
