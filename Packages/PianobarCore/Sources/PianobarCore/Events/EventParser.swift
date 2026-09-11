@@ -15,11 +15,15 @@ public enum EventParser {
         // auto-clears after 30s, leaving the app looking idle and healthy while
         // actually being unauthenticated, and never routing back to login.
         if eventType == "userlogin" {
-            let ok = wRet == 0 && pRet == 1
-            let message = wRet != 0
-                ? (kv["wRetStr"] ?? "Network error")
-                : (kv["pRetStr"] ?? "")
-            return .userLogin(success: ok, message: message)
+            if wRet != 0 {
+                return .userLogin(LoginResult(
+                    failure: .network, message: kv["wRetStr"] ?? "Network error"))
+            }
+            if pRet != 1 {
+                return .userLogin(LoginResult(
+                    failure: .credentials, message: kv["pRetStr"] ?? "Sign-in failed"))
+            }
+            return .userLogin(LoginResult(failure: nil, message: kv["pRetStr"] ?? ""))
         }
 
         // A command that failed entirely: surface the failure instead of the

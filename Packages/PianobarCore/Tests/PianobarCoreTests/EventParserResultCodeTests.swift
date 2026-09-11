@@ -18,11 +18,12 @@ final class EventParserResultCodeTests: XCTestCase {
         wRet=6
         wRetStr=Couldn't resolve host name
         """
-        guard case .userLogin(let ok, let message) =
+        guard case .userLogin(let result) =
                 EventParser.parse(eventType: "userlogin", payload: payload)
         else { return XCTFail("expected .userLogin") }
-        XCTAssertFalse(ok)
-        XCTAssertEqual(message, "Couldn't resolve host name")
+        XCTAssertEqual(result.failure, .network,
+                       "a transport failure must not be reported as bad credentials")
+        XCTAssertEqual(result.message, "Couldn't resolve host name")
     }
 
     func testLoginFailureFromPandoraCarriesItsMessage() {
@@ -32,18 +33,18 @@ final class EventParserResultCodeTests: XCTestCase {
         wRet=0
         wRetStr=OK
         """
-        guard case .userLogin(let ok, let message) =
+        guard case .userLogin(let result) =
                 EventParser.parse(eventType: "userlogin", payload: payload)
         else { return XCTFail("expected .userLogin") }
-        XCTAssertFalse(ok)
-        XCTAssertEqual(message, "Invalid login")
+        XCTAssertEqual(result.failure, .credentials)
+        XCTAssertEqual(result.message, "Invalid login")
     }
 
     func testSuccessfulLogin() {
         let payload = "pRet=1\npRetStr=Everything is fine :)\nwRet=0\nwRetStr=OK"
         XCTAssertEqual(
             EventParser.parse(eventType: "userlogin", payload: payload),
-            .userLogin(success: true, message: "Everything is fine :)"))
+            .userLogin(LoginResult(failure: nil, message: "Everything is fine :)")))
     }
 
     // MARK: - Pandora-side errors

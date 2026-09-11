@@ -59,7 +59,7 @@ final class PlaybackStateTests: XCTestCase {
     func testUserLoginFailureClearsAuth() async {
         let (stream, cont) = makeEventStream()
         let state = PlaybackState(events: stream)
-        cont.yield(.userLogin(success: false, message: "Invalid login"))
+        cont.yield(.userLogin(LoginResult(failure: .credentials, message: "Invalid login")))
         await waitUntil { state.authFailure != nil }
         XCTAssertEqual(state.authFailure, "Invalid login")
         cont.finish()

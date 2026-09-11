@@ -1,7 +1,18 @@
 import Foundation
 
 public final class EventBridge: @unchecked Sendable {
-    public enum Error: Swift.Error { case socketFailed(String) }
+    public enum Error: Swift.Error, LocalizedError {
+        case socketFailed(String)
+
+        // Without LocalizedError, `error.localizedDescription` renders as
+        // "The operation couldn't be completed. (… error 0.)" and throws away
+        // the reason we went to the trouble of capturing.
+        public var errorDescription: String? {
+            switch self {
+            case .socketFailed(let detail): return detail
+            }
+        }
+    }
 
     public let socketPath: String
     private var listenFD: Int32 = -1
@@ -74,11 +85,18 @@ public final class EventBridge: @unchecked Sendable {
         while !Task.isCancelled {
             let fd = accept(listenFD, nil, nil)
             if fd < 0 {
-                // The listening socket is gone (stop() closed it) or accept
-                // failed hard. Returning beats spinning at 100% CPU on a
-                // permanently failing accept.
-                if errno == EINTR || errno == ECONNABORTED { continue }
-                return
+                let err = errno
+                // The listening socket is gone — stop() closed it, so we're done.
+                if err == EBADF || err == EINVAL || listenFD < 0 { return }
+                // Anything else is transient (EMFILE under fd pressure,
+                // ECONNABORTED, EINTR). Don't end the event stream over it —
+                // that would freeze the UI on the last song with no error and
+                // no restart. Pause briefly so a persistent failure doesn't
+                // spin the CPU, then try again.
+                if err != EINTR {
+                    usleep(100_000)
+                }
+                continue
             }
             // Handled inline, on purpose: pianobar opens one connection per
             // event and their order is meaningful (e.g. songfinish before

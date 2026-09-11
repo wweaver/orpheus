@@ -37,8 +37,8 @@ In-app, under the **Controls** menu:
 | Action | Shortcut |
 | --- | --- |
 | Play / Pause | ⌘⇧P |
-| Next Song | ⌘→ |
-| Thumbs Up / Down | ⌘↑ / ⌘↓ |
+| Next Song | ⌘⇧N |
+| Thumbs Up / Down | ⌘⇧U / ⌘⇧D |
 | Tired of Song | ⌘⇧T |
 | Bookmark Song | ⌘⇧B |
 

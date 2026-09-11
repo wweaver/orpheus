@@ -99,11 +99,29 @@ public final class PlaybackState: ObservableObject {
                 ?? previousName.flatMap { name in stations.first { $0.name == name } }
                 ?? stations.first { $0.name == currentSong?.stationName }
                 ?? currentStation
-        case .userLogin(let ok, let msg):
-            authFailure = ok ? nil : (msg.isEmpty ? "Sign-in failed" : msg)
+        case .userLogin(let result):
+            switch result.failure {
+            case nil:
+                authFailure = nil
+            case .credentials:
+                // The stored password is genuinely wrong; the app clears it and
+                // returns to the login screen.
+                authFailure = result.message.isEmpty ? "Sign-in failed" : result.message
+            case .network:
+                // Couldn't reach Pandora. Leave the credentials alone, but make
+                // this banner sticky (nil `setAt` opts out of the 30s
+                // auto-dismiss): the app is unauthenticated and won't recover on
+                // its own, so a banner that quietly vanished would leave it
+                // looking idle and healthy.
+                errorBanner = "Couldn't sign in to Pandora: \(result.message)"
+                errorBannerSetAt = nil
+            }
         case .pandoraError(_, let msg), .networkError(let msg):
             errorBanner = msg
             errorBannerSetAt = Date()
+            // A fetch that failed will never produce the songStart that would
+            // otherwise clear this, so "Buffering…" would sit there forever.
+            isBuffering = false
         }
     }
 

@@ -114,6 +114,13 @@ final class AppBootstrap: ObservableObject {
     /// sign-out and by `launch`, which must not build a second stack on top of
     /// a live one.
     private func teardownPlaybackStack() async {
+        // Nothing of ours is running — most importantly on a cold launch,
+        // where `process`/`bridge`/`playbackState` are all still nil. Without
+        // this guard the keep-alive branch below would quit the surviving
+        // pianobar and clear its pidfile *before* launch() looks for it,
+        // breaking resume-on-launch on every single start.
+        guard playbackState != nil || bridge != nil || process != nil else { return }
+
         supervisorWatch?.cancel()
         supervisorWatch = nil
         stationTracker?.cancel()

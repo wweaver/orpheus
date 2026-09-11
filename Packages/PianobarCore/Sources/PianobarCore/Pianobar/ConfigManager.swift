@@ -3,13 +3,22 @@ import Foundation
 public struct ConfigManager {
     public enum AudioQuality: String { case low, medium, high }
 
-    public enum Error: Swift.Error, Equatable {
+    public enum Error: Swift.Error, Equatable, LocalizedError {
         /// A credential contained a newline. pianobar's config is a line-based
         /// `key = value` format with no escaping, so a newline would corrupt
         /// the file (and could inject arbitrary config keys).
         case invalidCredentials
         /// The config file couldn't be created or written.
         case writeFailed(String)
+
+        public var errorDescription: String? {
+            switch self {
+            case .invalidCredentials:
+                return "Credentials contain a line break, which pianobar's config format can't represent."
+            case .writeFailed(let detail):
+                return detail
+            }
+        }
     }
 
     private let configDir: URL

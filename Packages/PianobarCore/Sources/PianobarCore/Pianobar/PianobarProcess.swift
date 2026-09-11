@@ -87,7 +87,17 @@ public enum PianobarPidFile {
 }
 
 public actor PianobarProcess {
-    public enum Error: Swift.Error { case notRunning, spawnFailed(String) }
+    public enum Error: Swift.Error, LocalizedError {
+        case notRunning
+        case spawnFailed(String)
+
+        public var errorDescription: String? {
+            switch self {
+            case .notRunning:   return "pianobar isn't running."
+            case .spawnFailed(let detail): return detail
+            }
+        }
+    }
 
     public enum State: Equatable { case stopped, running, crashed }
 

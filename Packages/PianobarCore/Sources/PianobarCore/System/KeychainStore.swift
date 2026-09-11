@@ -2,7 +2,17 @@ import Foundation
 import Security
 
 public struct KeychainStore {
-    public enum Error: Swift.Error { case status(OSStatus) }
+    public enum Error: Swift.Error, LocalizedError {
+        case status(OSStatus)
+
+        public var errorDescription: String? {
+            switch self {
+            case .status(let code):
+                let message = SecCopyErrorMessageString(code, nil) as String?
+                return message ?? "Keychain error \(code)"
+            }
+        }
+    }
 
     private let service: String
 

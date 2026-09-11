@@ -95,6 +95,35 @@ final class PlaybackStateStationTests: XCTestCase {
         XCTAssertFalse(state.isBuffering)
     }
 
+    // MARK: - Login failures
+
+    func testNetworkLoginFailureDoesNotLookLikeBadCredentials() {
+        // The app clears the Keychain on `authFailure`. If a DNS blip set it,
+        // a transient outage would silently throw away working credentials.
+        let state = makeState()
+        state.apply(.userLogin(LoginResult(failure: .network, message: "Couldn't resolve host")))
+        XCTAssertNil(state.authFailure, "a network failure must not clear credentials")
+        XCTAssertNotNil(state.errorBanner, "but it must still be visible")
+    }
+
+    func testRejectedCredentialsSetAuthFailure() {
+        let state = makeState()
+        state.apply(.userLogin(LoginResult(failure: .credentials, message: "Invalid login")))
+        XCTAssertEqual(state.authFailure, "Invalid login")
+    }
+
+    // MARK: - Buffering is cleared on failure
+
+    func testBufferingClearsWhenTheFetchFails() {
+        // Only songStart used to clear it, so a failed playlist fetch left
+        // "Buffering…" on screen permanently.
+        let state = makeState()
+        state.apply(.stationFetchPlaylist)
+        XCTAssertTrue(state.isBuffering)
+        state.apply(.networkError(message: "offline"))
+        XCTAssertFalse(state.isBuffering)
+    }
+
     // MARK: - History identity
 
     func testHistoryEntriesGetDistinctIdentitiesEvenWhenIdentical() {

@@ -34,22 +34,25 @@ private struct ControlsMenuItems: View {
             let target = !state.isPlaying
             Task { await state.setPlayback(target, via: ctrl) }
         }
-        // Space is the natural key but it belongs to the focused control in a
-        // regular window, so use a modifier-based shortcut instead.
+        // All of these are ⌘⇧+letter on purpose. Menu key equivalents are
+        // matched before the responder chain gets a look in, so the arrow-key
+        // shortcuts the design spec suggested (⌘→, ⌘↑, ⌘↓) would have been
+        // stolen from text fields — typing in the station filter or the rename
+        // sheet and pressing ⌘→ to jump to end-of-line would skip the song.
         .keyboardShortcut("p", modifiers: [.command, .shift])
 
         Button("Next Song") { Task { try? await ctrl.next() } }
-            .keyboardShortcut(.rightArrow, modifiers: .command)
+            .keyboardShortcut("n", modifiers: [.command, .shift])
             .disabled(!hasSong)
 
         Divider()
 
         Button("Thumbs Up") { Task { try? await ctrl.love() } }
-            .keyboardShortcut(.upArrow, modifiers: .command)
+            .keyboardShortcut("u", modifiers: [.command, .shift])
             .disabled(!hasSong)
 
         Button("Thumbs Down") { Task { try? await ctrl.ban() } }
-            .keyboardShortcut(.downArrow, modifiers: .command)
+            .keyboardShortcut("d", modifiers: [.command, .shift])
             .disabled(!hasSong)
 
         Button("Tired of Song") { Task { try? await ctrl.tired() } }

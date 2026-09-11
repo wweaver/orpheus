@@ -1,12 +1,21 @@
 import Foundation
 
 public actor PianobarCtrl {
-    public enum Error: Swift.Error {
+    public enum Error: Swift.Error, LocalizedError {
         case openFailed(String)
         // Carries the underlying error rather than `errno`, which by the time a
         // Swift `FileHandle` throw is caught may already have been overwritten
         // by unrelated syscalls.
         case writeFailed(Swift.Error)
+
+        public var errorDescription: String? {
+            switch self {
+            case .openFailed(let detail):
+                return "Couldn't open pianobar's control channel: \(detail)"
+            case .writeFailed(let underlying):
+                return "Couldn't send the command to pianobar: \(underlying.localizedDescription)"
+            }
+        }
     }
 
     private let fifoPath: String
