@@ -6,7 +6,7 @@ public final class PlaybackState: ObservableObject {
     @Published public private(set) var currentSong: SongInfo?
     @Published public private(set) var currentStation: Station?
     @Published public private(set) var stations: [Station] = []
-    @Published public private(set) var history: [SongInfo] = []
+    @Published public private(set) var history: [HistoryEntry] = []
     @Published public private(set) var isPlaying: Bool = false
     @Published public var volume: Int = 50
     @Published public private(set) var progressSeconds: Int = 0
@@ -53,7 +53,7 @@ public final class PlaybackState: ObservableObject {
         switch event {
         case .songStart(let song):
             if let prev = currentSong {
-                history.insert(prev, at: 0)
+                history.insert(HistoryEntry(song: prev), at: 0)
                 if history.count > 50 { history.removeLast(history.count - 50) }
             }
             currentSong = song
@@ -153,5 +153,18 @@ public final class PlaybackState: ObservableObject {
                 self.progressSeconds += 1
             }
         }
+    }
+}
+
+/// A played song plus a stable identity. History is inserted at index 0, so
+/// list rows keyed by array offset would change identity on every new song and
+/// animate/recycle incorrectly.
+public struct HistoryEntry: Identifiable, Equatable, Sendable {
+    public let id: UUID
+    public var song: SongInfo
+
+    public init(id: UUID = UUID(), song: SongInfo) {
+        self.id = id
+        self.song = song
     }
 }

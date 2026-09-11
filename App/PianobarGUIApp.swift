@@ -52,11 +52,27 @@ struct RootView: View {
     var body: some View {
         Group {
             if bootstrap.needsLogin {
-                LoginView(onSubmit: { email, password in
+                LoginView(errorMessage: bootstrap.loginError) { email, password in
                     bootstrap.saveCredentials(email: email, password: password)
-                })
+                }
             } else if let state = bootstrap.playbackState, let ctrl = bootstrap.ctrl {
+                // Runtime errors (network drops, Pandora-side failures) live on
+                // PlaybackState and used to have no reader at all: the only
+                // ErrorBanner sat in a later `else if`, unreachable once
+                // playback existed. Overlay it here so a mid-session failure
+                // is visible instead of just freezing the progress bar.
                 MainWindowView(state: state, ctrl: ctrl)
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        if let message = state.errorBanner {
+                            ErrorBanner(
+                                message: message,
+                                onRetry: nil,
+                                onDismiss: { state.dismissErrorBanner() }
+                            )
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+                    }
+                    .animation(.easeInOut(duration: 0.2), value: state.errorBanner)
             } else if let startupError = bootstrap.startupError {
                 VStack(spacing: 0) {
                     ErrorBanner(

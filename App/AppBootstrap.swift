@@ -8,6 +8,8 @@ import PianobarCore
 @MainActor
 final class AppBootstrap: ObservableObject {
     @Published var needsLogin = false
+    /// Message from the last rejected sign-in, shown on the login screen.
+    @Published private(set) var loginError: String?
     @Published private(set) var startupError: String?
     @Published private(set) var playbackState: PlaybackState?
     @Published private(set) var ctrl: PianobarCtrl?
@@ -50,14 +52,51 @@ final class AppBootstrap: ObservableObject {
     }
 
     func saveCredentials(email: String, password: String) {
-        try? keychain.save(email: email, password: password)
+        do {
+            try keychain.save(email: email, password: password)
+        } catch {
+            // `save` deletes the old item before adding the new one, so a
+            // failure here has already discarded any previous credentials.
+            // Saying so beats a session that works now and silently demands a
+            // re-login on next launch.
+            loginError = "Couldn't save your credentials to the Keychain: \(error.localizedDescription)"
+            return
+        }
         needsLogin = false
+        loginError = nil
         startupError = nil
         Task { await launch(email: email, password: password) }
     }
 
+    /// Pandora rejected the credentials. Clear them and go back to the login
+    /// screen with the reason. Previously `authFailure` was recorded on
+    /// PlaybackState and read by nothing, so a wrong password left the user in
+    /// a permanently blank window with no route back except Preferences →
+    /// Account → Sign Out.
+    private func handleAuthFailure(_ message: String) {
+        guard !needsLogin else { return }
+        keychain.delete()
+        loginError = message
+        startInvoked = false
+        Task {
+            await teardownPlaybackStack()
+            clearPlaybackIntegrations()
+            needsLogin = true
+        }
+    }
+
+    private func observeAuthFailure(_ state: PlaybackState) {
+        state.$authFailure
+            .compactMap { $0 }
+            .sink { [weak self] message in
+                self?.handleAuthFailure(message)
+            }
+            .store(in: &snapshotSubs)
+    }
+
     func signOut() {
         keychain.delete()
+        loginError = nil
         UserDefaults.standard.removeObject(forKey: Prefs.Keys.lastStationName)
         UserDefaults.standard.removeObject(forKey: Prefs.Keys.lastStationId)
         SessionStore.clear()
@@ -377,6 +416,7 @@ final class AppBootstrap: ObservableObject {
             notificationPresenter = NotificationPresenter(state: state, ctrl: ctrl)
             globalHotkeys = GlobalHotkeys(state: state, ctrl: ctrl)
             trackCurrentStation(state)
+            observeAuthFailure(state)
             autoResumeLastStation(state: state, ctrl: ctrl)
         }
     }
@@ -393,8 +433,14 @@ final class AppBootstrap: ObservableObject {
         // Re-create the event socket at the same path — event_bridge.sh will
         // connect there on pianobar's next event. The FIFO lives on disk and
         // still has pianobar as reader, so we just open the writer end.
-        guard let b = try? EventBridge(socketPath: socketPath) else { return }
-        try? await b.start()
+        let b: EventBridge
+        do {
+            b = try EventBridge(socketPath: socketPath)
+            try await b.start()
+        } catch {
+            startupError = "Couldn't reattach to the running pianobar: \(error.localizedDescription)"
+            return
+        }
         bridge = b
 
         let state = PlaybackState(events: b.events)
@@ -412,6 +458,7 @@ final class AppBootstrap: ObservableObject {
             notificationPresenter = NotificationPresenter(state: state, ctrl: ctrl)
             globalHotkeys = GlobalHotkeys(state: state, ctrl: ctrl)
             trackCurrentStation(state)
+            observeAuthFailure(state)
             // Only resume if WE paused pianobar in our willTerminate. Other
             // exits (SIGTERM from killall, force quit, crash) leave pianobar
             // in whatever state it was in; toggling blindly would silence it.

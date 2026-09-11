@@ -85,20 +85,28 @@ public actor PianobarCtrl {
     private static let openRetryInterval: UInt64 = 50_000_000  // 50ms
 
     private func write(_ cmd: String) async throws {
-        if handle == nil {
-            try await openFIFO()
-        }
         guard let data = cmd.data(using: .utf8) else { return }
-        do {
-            try handle!.write(contentsOf: data)
-        } catch {
-            // Drop the handle so the next command reopens the FIFO. Keeping the
-            // stale one cached meant a single failed write killed the control
-            // channel for the rest of the session, even after the supervisor
-            // successfully restarted pianobar and recreated the FIFO.
-            try? handle?.close()
-            handle = nil
-            throw Error.writeFailed(error)
+        // pianobar reads its control FIFO in a loop that reopens the file each
+        // time round, so the reader end legitimately disappears between
+        // commands and a cached write handle goes stale with EPIPE. Drop the
+        // handle and retry once against a fresh descriptor; only a second
+        // failure is a real one.
+        //
+        // Dropping the handle also matters after pianobar dies and the
+        // supervisor recreates the FIFO — previously the stale handle stayed
+        // cached and every later command failed forever.
+        for attempt in 0...1 {
+            if handle == nil {
+                try await openFIFO()
+            }
+            do {
+                try handle!.write(contentsOf: data)
+                return
+            } catch {
+                try? handle?.close()
+                handle = nil
+                if attempt == 1 { throw Error.writeFailed(error) }
+            }
         }
     }
 
@@ -117,6 +125,12 @@ public actor PianobarCtrl {
         while true {
             let fd = open(fifoPath, O_WRONLY | O_NONBLOCK)
             if fd >= 0 {
+                // Writing to a FIFO whose reader (pianobar) has gone away
+                // raises SIGPIPE, which by default terminates the process.
+                // Suppress it per-descriptor so the write just fails with
+                // EPIPE and the caller can react — a library shouldn't depend
+                // on its host having changed the global signal disposition.
+                _ = fcntl(fd, F_SETNOSIGPIPE, 1)
                 handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
                 return
             }

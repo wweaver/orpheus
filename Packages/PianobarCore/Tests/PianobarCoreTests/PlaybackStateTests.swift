@@ -40,7 +40,7 @@ final class PlaybackStateTests: XCTestCase {
         await waitUntil { state.currentSong?.title == "A" }
         cont.yield(.songStart(b))
         await waitUntil { state.currentSong?.title == "B" }
-        XCTAssertEqual(state.history.map(\.title), ["A"])
+        XCTAssertEqual(state.history.map(\.song.title), ["A"])
         cont.finish()
     }
 

@@ -98,6 +98,7 @@ public actor PianobarProcess {
     private let eventDebugLogURL: URL?
     private let pidFilePath: String?
     private let supervisorBackoff: [TimeInterval]
+    private let healthyUptime: TimeInterval
     private var process: Process?
     private(set) var state: State = .stopped
     private var shouldStopSupervising = false
@@ -107,13 +108,17 @@ public actor PianobarProcess {
     public nonisolated let supervisorFailures: AsyncStream<Void>
 
     /// Default backoff: 1, 2, 4, 8, 16, 30s. After 5 consecutive crashes, give up.
+    /// `healthyUptime` is how long a process must stay up for the crash to be
+    /// treated as isolated rather than part of a loop, which refunds the
+    /// backoff budget.
     public init(executablePath: String,
                 xdgConfigHome: String,
                 eventSocketPath: String,
                 logFileURL: URL? = nil,
                 eventDebugLogURL: URL? = nil,
                 pidFilePath: String? = nil,
-                supervisorBackoff: [TimeInterval] = [1, 2, 4, 8, 16, 30]) {
+                supervisorBackoff: [TimeInterval] = [1, 2, 4, 8, 16, 30],
+                healthyUptime: TimeInterval = 60) {
         self.executablePath = executablePath
         self.xdgConfigHome = xdgConfigHome
         self.eventSocketPath = eventSocketPath
@@ -121,6 +126,7 @@ public actor PianobarProcess {
         self.eventDebugLogURL = eventDebugLogURL
         self.pidFilePath = pidFilePath
         self.supervisorBackoff = supervisorBackoff
+        self.healthyUptime = healthyUptime
 
         var cont: AsyncStream<Void>.Continuation!
         self.supervisorFailures = AsyncStream(bufferingPolicy: .bufferingNewest(8)) { cont = $0 }
@@ -161,10 +167,6 @@ public actor PianobarProcess {
         state = .stopped
     }
 
-    /// A process that stayed up at least this long counts as a successful
-    /// start, not part of a crash loop, so the backoff budget is refunded.
-    private static let healthyUptime: TimeInterval = 60
-
     private func superviseLoop() async {
         var failureIndex = 0
         while !shouldStopSupervising {
@@ -183,7 +185,7 @@ public actor PianobarProcess {
             // crashes for the life of the session. Without this reset a session
             // that plays fine for hours and hits one transient crash per hour
             // exhausts the budget and permanently gives up.
-            if Date().timeIntervalSince(startedAt) >= Self.healthyUptime {
+            if Date().timeIntervalSince(startedAt) >= healthyUptime {
                 failureIndex = 0
             }
             // Unexpected exit.

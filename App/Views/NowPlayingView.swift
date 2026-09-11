@@ -40,19 +40,35 @@ struct NowPlayingView: View {
                 }
 
                 HStack(spacing: 8) {
-                    transportButton(systemName: state.isPlaying ? "pause.fill" : "play.fill") {
+                    transportButton(
+                        systemName: state.isPlaying ? "pause.fill" : "play.fill",
+                        label: state.isPlaying ? "Pause" : "Play"
+                    ) {
                         let target = !state.isPlaying
                         Task { await state.setPlayback(target, via: ctrl) }
                     }
-                    transportButton(systemName: "forward.fill") {
+                    transportButton(systemName: "forward.fill", label: "Next song") {
                         Task { try? await ctrl.next() }
                     }
-                    transportButton(systemName: "hand.thumbsdown") {
+                    // Filled + tinted once the song is rated, so the user can
+                    // tell whether they already voted on it.
+                    transportButton(
+                        systemName: rating == .banned ? "hand.thumbsdown.fill" : "hand.thumbsdown",
+                        label: "Thumbs down",
+                        isOn: rating == .banned,
+                        tint: .red
+                    ) {
                         Task { try? await ctrl.ban() }
                     }
-                    transportButton(systemName: "hand.thumbsup") {
+                    transportButton(
+                        systemName: rating == .loved ? "hand.thumbsup.fill" : "hand.thumbsup",
+                        label: "Thumbs up",
+                        isOn: rating == .loved,
+                        tint: .green
+                    ) {
                         Task { try? await ctrl.love() }
                     }
+                    overflowMenu
                 }
 
                 progressBar
@@ -91,13 +107,60 @@ struct NowPlayingView: View {
         }
     }
 
-    private func transportButton(systemName: String, action: @escaping () -> Void) -> some View {
+    private var rating: Rating { state.currentSong?.rating ?? .unrated }
+
+    private func transportButton(
+        systemName: String,
+        label: String,
+        isOn: Bool = false,
+        tint: Color = .accentColor,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.body)
                 .frame(width: 24, height: 24)
+                .foregroundStyle(isOn ? tint : Color.primary)
         }
         .buttonStyle(.bordered)
+        .disabled(state.currentSong == nil)
+        .help(label)
+        .accessibilityLabel(label)
+    }
+
+    /// Commands pianobar has always supported and PianobarCtrl has always
+    /// implemented, but which had no caller anywhere in the UI.
+    @ViewBuilder
+    private var overflowMenu: some View {
+        Menu {
+            Button("Tired of Song") { Task { try? await ctrl.tired() } }
+            Divider()
+            Button("Bookmark Song") { Task { try? await ctrl.bookmarkSong() } }
+            Button("Bookmark Artist") { Task { try? await ctrl.bookmarkArtist() } }
+            Divider()
+            Button("Create Station from Song") {
+                Task { try? await ctrl.createStationFromSong() }
+            }
+            Button("Create Station from Artist") {
+                Task { try? await ctrl.createStationFromArtist() }
+            }
+            if let song = state.currentSong {
+                Divider()
+                Button("Open in Pandora") {
+                    openURL(song.detailURL ?? pandoraAlbumURL(for: song))
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.body)
+                .frame(width: 24, height: 24)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .frame(width: 34)
+        .disabled(state.currentSong == nil)
+        .help("More actions")
+        .accessibilityLabel("More actions")
     }
 
     @ViewBuilder
@@ -117,6 +180,10 @@ struct NowPlayingView: View {
                 .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 12)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Playback progress")
+            .accessibilityValue(
+                "\(format(min(state.progressSeconds, song.durationSeconds))) of \(format(song.durationSeconds))")
         }
     }
 
