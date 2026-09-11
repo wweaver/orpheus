@@ -322,12 +322,6 @@ final class AppBootstrap: ObservableObject {
             return
         }
 
-        // Either the pref is off, or the pidfile is stale / the process died.
-        // Clean up any orphan pidfile so we don't keep thinking it's alive.
-        PianobarPidFile.clear(at: pidFilePath)
-        // Fresh pianobar means we definitely don't need to toggle play state.
-        UserDefaults.standard.set(false, forKey: Prefs.Keys.pianobarWasPaused)
-
         // Resolve pianobar path. Dev builds use Homebrew.
         guard let pianobarPath = resolvePianobarPath() else {
             // Falling back to a hardcoded path that resolvePianobarPath just
@@ -336,6 +330,19 @@ final class AppBootstrap: ObservableObject {
             startupError = "pianobar isn't installed. Install it with `brew install pianobar`, then click Retry."
             return
         }
+
+        // Either the pref is off, or the pidfile is stale / the process died.
+        //
+        // If a pianobar from a previous run is still alive at this point it's
+        // an orphan: the app was SIGKILLed or crashed, so neither the atexit
+        // hook nor the signal handlers got to run, and it's been playing audio
+        // with no UI and no way to control it. Kill it before spawning another
+        // one, or the user ends up with two overlapping streams. `reapOrphan`
+        // confirms the pid really is the pianobar binary first, since pids are
+        // recycled.
+        PianobarPidFile.reapOrphan(at: pidFilePath, expecting: pianobarPath)
+        // Fresh pianobar means we definitely don't need to toggle play state.
+        UserDefaults.standard.set(false, forKey: Prefs.Keys.pianobarWasPaused)
 
         let eventBridgePath = PianobarCoreResources.eventBridgeScriptURL.path
 

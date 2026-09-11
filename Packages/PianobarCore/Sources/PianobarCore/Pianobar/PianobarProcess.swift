@@ -1,9 +1,31 @@
 import Foundation
 import Darwin
 
-/// Atomically-tracked PID of the most recently spawned pianobar child. Used by
-/// an `atexit` hook so ⌘Q / `NSApp.terminate(_:)` reliably kills pianobar even
-/// though the Swift actor that owns it can't be awaited from a C callback.
+/// Lock-free mirrors of the child pid and the exit policy.
+///
+/// A signal handler may only call async-signal-safe functions, which rules out
+/// taking the registry's `NSLock`. `kill(2)` *is* async-signal-safe, so the
+/// handler reads these instead. `sig_atomic_t` is the type the C standard
+/// guarantees can be read and written atomically with respect to signals.
+nonisolated(unsafe) private var signalSafePianobarPID: sig_atomic_t = 0
+nonisolated(unsafe) private var signalSafeKeepAlive: sig_atomic_t = 0
+
+/// Signals whose default disposition terminates us, and which we can catch.
+/// SIGKILL is deliberately absent: it cannot be caught, which is why
+/// `reapOrphanIfAny` exists as the backstop.
+private let terminatingSignals: [Int32] = [SIGTERM, SIGINT, SIGHUP, SIGQUIT]
+
+/// Atomically-tracked PID of the most recently spawned pianobar child.
+///
+/// Cleanup runs from two places, because neither covers every exit:
+///   * an `atexit` hook, for a normal quit (⌘Q / `NSApp.terminate`);
+///   * signal handlers, because `atexit` does *not* run on SIGTERM, SIGINT or
+///     SIGHUP — so `killall Orpheus`, a force quit, a logout, or a parent
+///     shell going away all used to leave pianobar playing with no UI and no
+///     way to control it short of `killall pianobar`.
+///
+/// A `kill -9` or a hard crash can't be intercepted at all; `reapOrphanIfAny`
+/// cleans up after those on the next launch.
 public final class PianobarPIDRegistry: @unchecked Sendable {
     public enum ExitAction: Sendable { case kill, keepAlive }
 
@@ -21,21 +43,48 @@ public final class PianobarPIDRegistry: @unchecked Sendable {
             // .keepAlive: leave the child running; a future launch will
             // reattach via the pidfile.
         }
+        installSignalHandlers()
+    }
+
+    private func installSignalHandlers() {
+        for signo in terminatingSignals {
+            var action = sigaction()
+            action.__sigaction_u.__sa_handler = { caught in
+                // Async-signal-safe only: no locks, no allocation, no Swift
+                // runtime calls beyond these.
+                if signalSafeKeepAlive == 0 {
+                    let pid = signalSafePianobarPID
+                    if pid > 0 { _ = kill(pid_t(pid), SIGTERM) }
+                }
+                // Re-raise with the default handler so our exit status still
+                // reflects the signal that killed us.
+                signal(caught, SIG_DFL)
+                raise(caught)
+            }
+            sigemptyset(&action.sa_mask)
+            action.sa_flags = 0
+            sigaction(signo, &action, nil)
+        }
     }
 
     public func set(_ newPid: pid_t) {
         lock.lock(); defer { lock.unlock() }
         pid = newPid
+        signalSafePianobarPID = sig_atomic_t(newPid)
     }
 
     public func clear(_ oldPid: pid_t) {
         lock.lock(); defer { lock.unlock() }
-        if pid == oldPid { pid = 0 }
+        if pid == oldPid {
+            pid = 0
+            signalSafePianobarPID = 0
+        }
     }
 
     public func setExitAction(_ action: ExitAction) {
         lock.lock(); defer { lock.unlock() }
         self.action = action
+        signalSafeKeepAlive = (action == .keepAlive) ? 1 : 0
     }
 
     private func snapshot() -> (pid_t, ExitAction) {
@@ -83,6 +132,70 @@ public enum PianobarPidFile {
     public static func existingLivePid(at path: String) -> pid_t? {
         guard let pid = read(at: path) else { return nil }
         return kill(pid, 0) == 0 ? pid : nil
+    }
+
+    /// Absolute path of the executable a pid is running, or nil.
+    ///
+    /// Pids are recycled, so "this pid is alive" is not evidence that it's
+    /// still *our* pianobar — by the time we look, the number could belong to
+    /// any process on the system. Anything that goes on to kill the pid must
+    /// confirm identity first.
+    public static func executablePath(of pid: pid_t) -> String? {
+        var buffer = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+        let length = proc_pidpath(pid, &buffer, UInt32(buffer.count))
+        guard length > 0 else { return nil }
+        return String(cString: buffer)
+    }
+
+    /// Kill a pianobar left behind by a previous run of the app.
+    ///
+    /// The signal handlers cover an ordinary kill, but `SIGKILL` and hard
+    /// crashes can't be intercepted at all, so a pianobar can still be
+    /// orphaned — playing audio with no UI and no way to control it. Clean it
+    /// up at the next launch, but only once we've confirmed the pid really is
+    /// the pianobar binary we spawn and not a recycled pid.
+    ///
+    /// Returns true if something was killed.
+    @discardableResult
+    public static func reapOrphan(at path: String, expecting executablePath: String) -> Bool {
+
+        guard let pid = existingLivePid(at: path) else {
+            clear(at: path)
+            return false
+        }
+        guard let running = Self.executablePath(of: pid),
+              isPianobar(running, expecting: executablePath)
+        else {
+            // Stale file pointing at an unrelated process. Drop the file, but
+            // do not touch the process.
+            clear(at: path)
+            return false
+        }
+        _ = kill(pid, SIGTERM)
+        clear(at: path)
+        return true
+    }
+
+    /// Whether a running executable path is the pianobar we spawn.
+    ///
+    /// Compares canonical paths, because `proc_pidpath` resolves symlinks and
+    /// the path we launch usually *is* one — Homebrew's
+    /// `/opt/homebrew/bin/pianobar` points into `Cellar/pianobar/<version>/`,
+    /// so a naive string compare never matched and the orphan survived.
+    ///
+    /// Falls back to the executable name, which also covers a pianobar left
+    /// over from before a Homebrew upgrade moved the Cellar path. The pid came
+    /// from a pidfile only we write, inside our own Application Support
+    /// directory, so "recycled pid that also happens to be running pianobar"
+    /// is not a case worth protecting against — and killing it would be right
+    /// anyway.
+    private static func isPianobar(_ running: String, expecting expected: String) -> Bool {
+        let canonical = { (path: String) -> String in
+            URL(fileURLWithPath: path).resolvingSymlinksInPath().path
+        }
+        if canonical(running) == canonical(expected) { return true }
+        return URL(fileURLWithPath: running).lastPathComponent
+            == URL(fileURLWithPath: expected).lastPathComponent
     }
 }
 

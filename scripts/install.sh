@@ -47,8 +47,11 @@ xcodebuild \
 echo "▶︎ Stopping any running copy"
 killall Orpheus 2>/dev/null || true
 killall PianobarGUI 2>/dev/null || true
-# Give the atexit hook a moment to kill the child pianobar before we nuke
-# the bundle out from under it.
+# `killall` sends SIGTERM, which the app catches and uses to kill its pianobar
+# child before re-raising. Give that a moment to land before we pull the bundle
+# out from under it. The `killall pianobar` below is only a backstop for a
+# pianobar orphaned by an older build (or a SIGKILL), which the app would
+# otherwise not reap until its next launch.
 sleep 1
 killall pianobar 2>/dev/null || true
 
