@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- WidgetKit extensions have to be sandboxed to load. -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+
+	<!-- Read-only access to the directory Orpheus publishes widget state into.
+	     An App Group would be the idiomatic choice and does not work: Orpheus
+	     signs with an untrusted self-signed certificate and no Developer Team,
+	     so the sandbox comes up as `signer:none` and group containers are never
+	     mapped. A temporary exception is granted from this entitlement rather
+	     than from the signing identity, so it works regardless.
+
+	     Read-only is deliberate — the widget never writes. Button presses go
+	     back to the app as distributed notifications, which the sandbox allows
+	     without any exception. Keep this path in sync with
+	     OrpheusShared.sharedDirectory. -->
+	<key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
+	<array>
+		<string>/Library/Application Support/PianobarGUI/Widget/</string>
+	</array>
+</dict>
+</plist>

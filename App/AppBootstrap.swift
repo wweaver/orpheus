@@ -18,6 +18,7 @@ final class AppBootstrap: ObservableObject {
     private var bridge: EventBridge?
     private var process: PianobarProcess?
     private var nowPlayingBridge: NowPlayingBridge?
+    private var widgetBridge: WidgetBridge?
     private var notificationPresenter: NotificationPresenter?
     private var globalHotkeys: GlobalHotkeys?
     private var supervisorWatch: Task<Void, Never>?
@@ -248,6 +249,10 @@ final class AppBootstrap: ObservableObject {
     }
 
     private func handleWillTerminate() {
+        // Whatever else happens below, the widget's buttons stop working the
+        // moment this process exits: pianobar is our child and the distributed
+        // notification has no listener. Say so before we go.
+        WidgetBridge.markAppStopped()
         guard UserDefaults.standard.bool(forKey: Prefs.Keys.keepPianobarAlive),
               let state = playbackState
         else {
@@ -437,6 +442,7 @@ final class AppBootstrap: ObservableObject {
 
         if let state = playbackState, let ctrl = ctrl {
             nowPlayingBridge = NowPlayingBridge(state: state, ctrl: ctrl)
+            widgetBridge = WidgetBridge(state: state, ctrl: ctrl)
             notificationPresenter = NotificationPresenter(state: state, ctrl: ctrl)
             globalHotkeys = GlobalHotkeys(state: state, ctrl: ctrl)
             trackCurrentStation(state)
@@ -479,6 +485,7 @@ final class AppBootstrap: ObservableObject {
 
         if let state = playbackState, let ctrl = ctrl {
             nowPlayingBridge = NowPlayingBridge(state: state, ctrl: ctrl)
+            widgetBridge = WidgetBridge(state: state, ctrl: ctrl)
             notificationPresenter = NotificationPresenter(state: state, ctrl: ctrl)
             globalHotkeys = GlobalHotkeys(state: state, ctrl: ctrl)
             trackCurrentStation(state)
@@ -611,6 +618,8 @@ final class AppBootstrap: ObservableObject {
     private func clearPlaybackIntegrations() {
         nowPlayingBridge?.invalidate()
         nowPlayingBridge = nil
+        widgetBridge?.invalidate()
+        widgetBridge = nil
         notificationPresenter = nil
         globalHotkeys?.invalidate()
         globalHotkeys = nil

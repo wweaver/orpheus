@@ -70,6 +70,17 @@ xcodebuild \
 
 [ -d "$BUILT_APP" ] || { echo "Built app not found at $BUILT_APP" >&2; exit 1; }
 
+# The app group that lets the desktop widget read now-playing state can't be
+# declared in the Xcode project — doing so makes manual signing demand a
+# provisioning profile, and therefore a Developer Team. Inject it here instead,
+# after the build, using the same identity. See scripts/sign-entitlements.sh.
+echo "▶︎ Applying entitlements (app group for the widget)"
+SIGN_IDENTITY="-"
+if security find-certificate -c "Orpheus Code Signing" >/dev/null 2>&1; then
+    SIGN_IDENTITY="Orpheus Code Signing"
+fi
+"$ROOT/scripts/sign-entitlements.sh" "$BUILT_APP" "$SIGN_IDENTITY"
+
 echo "▶︎ Stopping any running copy"
 killall Orpheus 2>/dev/null || true
 killall PianobarGUI 2>/dev/null || true
@@ -80,6 +91,11 @@ killall PianobarGUI 2>/dev/null || true
 # otherwise not reap until its next launch.
 sleep 1
 killall pianobar 2>/dev/null || true
+# The widget extension is a separate process owned by WidgetKit, and it keeps
+# running — executing the *old* binary from memory — when the bundle is replaced
+# underneath it. Without this, a reinstall silently has no effect on the widget
+# until something else happens to restart it. WidgetKit relaunches it on demand.
+killall OrpheusWidget 2>/dev/null || true
 
 echo "▶︎ Installing to $DEST"
 mkdir -p "$(dirname "$DEST")"

@@ -4,7 +4,7 @@ Native macOS Pandora client built on [pianobar](https://github.com/promyloph/pia
 Spiritual successor to [Hermes](https://hermesapp.org/), which doesn't run on
 modern macOS anymore.
 
-Menu-bar presence, Now Playing widget, media-key control, notifications,
+Menu-bar presence, desktop widget, Now Playing widget, media-key control, notifications,
 station list with filter, thumbs / tired / bookmark, played-song history,
 volume, global and in-app keyboard shortcuts, auto-resume of last station,
 and an experimental pause-on-quit / resume-on-launch mode.
@@ -92,10 +92,41 @@ git pull
 
 ```
 App/                    Xcode app target — SwiftUI views, menu bar, prefs.
+Widget/                 WidgetKit extension — desktop widget, three sizes.
+Shared/                 Snapshot + command types compiled into both targets.
 Packages/PianobarCore/  Swift Package — all logic, full test suite.
 scripts/                Build/install helpers (install.sh, make-icon.sh).
 docs/superpowers/       Design spec, implementation plans, QA checklists.
 ```
+
+### Desktop widget
+
+Small, medium and large. Cover art, title, artist, station, progress, and
+play/pause, skip and thumbs buttons — large adds the album line and "tired of
+this song".
+
+Two things about it are worth knowing before changing anything:
+
+- **It is not backed by an App Group**, despite that being the obvious choice.
+  Orpheus signs with an untrusted self-signed certificate and no Developer Team
+  (see `scripts/make-signing-cert.sh`), so `secinitd` brings the extension's
+  sandbox up as `signer:none` and never maps a group container — the path
+  resolves, but every read off it is denied. Instead the app publishes to
+  `~/Library/Application Support/PianobarGUI/Widget/` and the extension holds a
+  read-only sandbox *temporary exception* for it, which is granted from the
+  entitlement rather than the signing identity. `OrpheusShared.sharedDirectory`
+  and `Widget/OrpheusWidget.entitlements` must agree on that path.
+
+- **Buttons only work while Orpheus is running**, because pianobar is a child of
+  the app. Presses travel back as distributed notifications, which a sandboxed
+  extension is allowed to post; `WidgetBridge` turns them into `PianobarCtrl`
+  calls. When the app has quit, the snapshot's `appRunning` flag is false and the
+  widget hides the transport rather than dropping presses silently.
+
+Entitlements are applied after the build by `scripts/sign-entitlements.sh`
+(invoked from `install.sh`), not via `CODE_SIGN_ENTITLEMENTS` — declaring them
+in the project makes Xcode's manual signing path demand a provisioning profile,
+and therefore a Developer Team.
 
 ## Development
 
