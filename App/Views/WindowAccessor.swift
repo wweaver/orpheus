@@ -34,16 +34,15 @@ enum WindowResizer {
     /// followed by a slide.
     static let sidebarAnimationDuration: TimeInterval = 0.25
 
-    /// Widen or narrow `window` by `delta`, moving the **left** edge.
+    /// Widen or narrow `window` by `delta`, moving the **right** edge.
     ///
-    /// The sidebar lives on the left, so growing that edge outward leaves the
+    /// The sidebar lives on the right, so growing that edge outward leaves the
     /// detail pane at exactly the same place on screen — the sidebar simply
-    /// occupies space that didn't exist a moment ago. Growing the right edge
-    /// instead (the obvious implementation) shoves the player 220pt sideways
-    /// as the sidebar claims the left of the split, which is the bulk of the
-    /// jerkiness.
+    /// occupies space that didn't exist a moment ago. Growing the left edge
+    /// instead shoves the player 220pt sideways as the sidebar claims the
+    /// right of the split, which is the bulk of the jerkiness.
     ///
-    /// Falls back to moving the right edge when there isn't room to the left,
+    /// Falls back to moving the left edge when there isn't room to the right,
     /// e.g. the window is already against the edge of the screen.
     static func adjustWidth(
         of window: NSWindow,
@@ -64,16 +63,16 @@ enum WindowResizer {
         // title bar where it is.
         target.origin.y = current.maxY - target.height
 
-        // Move the left edge; the right edge stays put.
-        target.origin.x = current.maxX - target.width
+        // Move the right edge; the left edge stays put.
+        target.origin.x = current.minX
 
         if let visible {
-            // Not enough room on the left — take it from the right instead.
+            // Not enough room on the right — take it from the left instead.
+            if target.maxX > visible.maxX {
+                target.origin.x = visible.maxX - target.width
+            }
             if target.minX < visible.minX {
                 target.origin.x = visible.minX
-            }
-            if target.maxX > visible.maxX {
-                target.origin.x = max(visible.minX, visible.maxX - target.width)
             }
         }
 

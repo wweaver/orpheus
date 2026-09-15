@@ -18,6 +18,7 @@ struct StationsSidebarView: View {
     @State private var lastClickedID: String?
     @State private var lastClickedAt: Date = .distantPast
     @State private var filter: String = ""
+    @FocusState private var filterFocused: Bool
 
     private var filteredStations: [Station] {
         let trimmed = filter.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -41,6 +42,8 @@ struct StationsSidebarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            filterField
+
             List(selection: $selection) {
                 ForEach(filteredStations) { station in
                     row(for: station)
@@ -64,7 +67,6 @@ struct StationsSidebarView: View {
             // play/pause key, and binding it here made pressing it tear down
             // the current stream and start a different station. It also broke
             // List's type-select.
-            .searchable(text: $filter, placement: .sidebar, prompt: "Filter stations")
             .overlay {
                 if state.stations.isEmpty {
                     emptyState
@@ -173,6 +175,53 @@ struct StationsSidebarView: View {
         // tell which station is playing.
         .accessibilityElement(children: .combine)
         .accessibilityLabel(isCurrent ? "\(station.name), now playing" : station.name)
+    }
+
+    /// Hand-rolled rather than `.searchable(placement: .sidebar)`.
+    ///
+    /// The sidebar sits on the trailing edge via a right-to-left flip of the
+    /// split view (see MainWindowView), with each column's contents flipped
+    /// back to left-to-right. `.searchable` escapes that: SwiftUI hoists its
+    /// field into the split view's own chrome, outside the column, so it kept
+    /// the mirrored direction — magnifier and placeholder ended up right-
+    /// aligned. A plain field is ordinary column content and inherits the flip
+    /// back like everything else.
+    private var filterField: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+            TextField("Filter stations", text: $filter)
+                .textFieldStyle(.plain)
+                .focused($filterFocused)
+                .accessibilityLabel("Filter stations")
+            if !filter.isEmpty {
+                Button {
+                    filter = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear filter")
+            }
+        }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 4)
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+        .padding(.horizontal, 10)
+        .padding(.top, 8)
+        .padding(.bottom, 6)
+        // Escape clears the filter, matching the search field it replaces.
+        .onExitCommand { filter = "" }
+        // `.searchable` gave us ⌘F for free; a zero-sized button keeps it.
+        .background {
+            Button("") { filterFocused = true }
+                .keyboardShortcut("f", modifiers: .command)
+                .opacity(0)
+                .frame(width: 0, height: 0)
+                .accessibilityHidden(true)
+        }
     }
 
     private func row(for station: Station) -> some View {

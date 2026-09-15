@@ -9,7 +9,10 @@
 /* Begin PBXBuildFile section */
 		07AAAA4C4F9E0E3B9AEAB0E6 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBC19A543E459CFE9C8F7BEA /* HistoryView.swift */; };
 		0C943CC5A00CBFEDAB8F256D /* AppBootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = C12322653DF30954F37F01AF /* AppBootstrap.swift */; };
+		11FA4C757F7A7A9FD2A8920D /* OrpheusWidgetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DC75652C2A26406727F3D1B /* OrpheusWidgetViews.swift */; };
 		2B54E61E07F5174385F4A133 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCBC3E6F9EB0BCB3B76588B8 /* ErrorBanner.swift */; };
+		43AD1FA94AAFD904C375394F /* OrpheusWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 915A9F5828D57FC36DF770C1 /* OrpheusWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		4CCD9B4C7331F4F192B312A7 /* OrpheusWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80452540DCC4E332783C1647 /* OrpheusWidget.swift */; };
 		4CF756580F67171E9D5772FB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 94F3B7C1C3C3828388DC53DB /* Assets.xcassets */; };
 		4E48D98913AF399C22FC6164 /* PianobarCore in Frameworks */ = {isa = PBXBuildFile; productRef = 150E4869B0E0764AD2D55501 /* PianobarCore */; };
 		563F4A76E47351576496291A /* SessionSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF6D2FDA80F91D75A970C43 /* SessionSnapshot.swift */; };
@@ -21,29 +24,65 @@
 		A0AA32140B4EE7C02AC47234 /* MainWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CAC15D89B673192722274EC /* MainWindowView.swift */; };
 		A9AE47A56D923CC74F9A5EF7 /* WindowAccessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBF897FE03C560104738012C /* WindowAccessor.swift */; };
 		AB1624630F58CEC1DD5F0586 /* HotkeyRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF400929F736279A9E5F98B9 /* HotkeyRecorder.swift */; };
+		B823A063C7CE65947BC8D3F8 /* WidgetBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8845EC405E588FCCABB3B795 /* WidgetBridge.swift */; };
 		BDEA039AC61C621EB3FCDD71 /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F131B6A830377123C387B091 /* PreferencesView.swift */; };
+		BE6900F82DC59A50D11204E6 /* OrpheusShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E4E8BD98E4A9BAAF764776 /* OrpheusShared.swift */; };
 		CBD9D95156CCB97E7067DE26 /* PlaybackCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C07280115783998B20AB18B /* PlaybackCommands.swift */; };
 		D6FDBE89C173B604A693917F /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42A133FADB073A0E23B2FEDE /* LoginView.swift */; };
 		D70DF8A974C65F39212755DB /* NowPlayingBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E61C01A9FD4B908B4910C6D /* NowPlayingBridge.swift */; };
+		E10352E524DCCF0CCD12F052 /* OrpheusWidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C35C706FA2811D23992C5C /* OrpheusWidgetIntents.swift */; };
 		E145C93EA899C688EB5E985A /* PianobarGUIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC907284417A2ED90AE92C82 /* PianobarGUIApp.swift */; };
 		F0D1D777ABDAEF27887D3867 /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BC5936206EFA2AD9926CC64 /* NowPlayingView.swift */; };
 		F40435B8A65FFE21EF7A36A1 /* Prefs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55E5367FD41FCDDF946E82B0 /* Prefs.swift */; };
 		F4E702972F0693C68B0B6784 /* StationsSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E86A9EEEF6B2F335456AAA1A /* StationsSidebarView.swift */; };
 		FA7A64226DDF759073F37C47 /* AppIcon-source.png in Resources */ = {isa = PBXBuildFile; fileRef = 381EAF5E52455D1215CCA695 /* AppIcon-source.png */; };
+		FEE576D8D86D73BE74930ABA /* OrpheusShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E4E8BD98E4A9BAAF764776 /* OrpheusShared.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		E72F597313A809050ECBB455 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C9168242FD332CD974683F1F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5FB96E74263E464072219A64;
+			remoteInfo = OrpheusWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		12579E7935109B8DC7D9190E /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				43AD1FA94AAFD904C375394F /* OrpheusWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		0B27A33793EFCD536E4CE7D1 /* MenuBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBar.swift; sourceTree = "<group>"; };
 		0C07280115783998B20AB18B /* PlaybackCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackCommands.swift; sourceTree = "<group>"; };
+		1207C69E5CF80838300FF5C7 /* OrpheusWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OrpheusWidget.entitlements; sourceTree = "<group>"; };
 		1BC5936206EFA2AD9926CC64 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
 		381EAF5E52455D1215CCA695 /* AppIcon-source.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AppIcon-source.png"; sourceTree = "<group>"; };
+		3DC75652C2A26406727F3D1B /* OrpheusWidgetViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrpheusWidgetViews.swift; sourceTree = "<group>"; };
 		42A133FADB073A0E23B2FEDE /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		48F5113C2E33A46619F61AB0 /* GlobalHotkeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalHotkeys.swift; sourceTree = "<group>"; };
 		55E5367FD41FCDDF946E82B0 /* Prefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Prefs.swift; sourceTree = "<group>"; };
+		6F4B39A106E4ABFF8ACF79DF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7839798FA6C9B3317F3BCE13 /* PlaybackTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackTransport.swift; sourceTree = "<group>"; };
 		7E61C01A9FD4B908B4910C6D /* NowPlayingBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingBridge.swift; sourceTree = "<group>"; };
+		80452540DCC4E332783C1647 /* OrpheusWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrpheusWidget.swift; sourceTree = "<group>"; };
+		8845EC405E588FCCABB3B795 /* WidgetBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetBridge.swift; sourceTree = "<group>"; };
+		915A9F5828D57FC36DF770C1 /* OrpheusWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OrpheusWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		94F3B7C1C3C3828388DC53DB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		97E4E8BD98E4A9BAAF764776 /* OrpheusShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrpheusShared.swift; sourceTree = "<group>"; };
 		9CAC15D89B673192722274EC /* MainWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowView.swift; sourceTree = "<group>"; };
+		B1C35C706FA2811D23992C5C /* OrpheusWidgetIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrpheusWidgetIntents.swift; sourceTree = "<group>"; };
 		B2210E62872345F44D14C42F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		BBF897FE03C560104738012C /* WindowAccessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowAccessor.swift; sourceTree = "<group>"; };
 		C12322653DF30954F37F01AF /* AppBootstrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBootstrap.swift; sourceTree = "<group>"; };
@@ -75,6 +114,7 @@
 		389715B26B8EC693F5BC13AF /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				915A9F5828D57FC36DF770C1 /* OrpheusWidget.appex */,
 				EDC626EDA1076A67F46E8683 /* PianobarGUI.app */,
 			);
 			name = Products;
@@ -87,6 +127,7 @@
 				0B27A33793EFCD536E4CE7D1 /* MenuBar.swift */,
 				D60D0DE7DD8F552AFC71D4F1 /* NotificationPresenter.swift */,
 				7E61C01A9FD4B908B4910C6D /* NowPlayingBridge.swift */,
+				8845EC405E588FCCABB3B795 /* WidgetBridge.swift */,
 			);
 			path = System;
 			sourceTree = "<group>";
@@ -118,6 +159,18 @@
 			path = Packages;
 			sourceTree = "<group>";
 		};
+		A6A0D4699FEFF14F9FC107E6 /* Widget */ = {
+			isa = PBXGroup;
+			children = (
+				6F4B39A106E4ABFF8ACF79DF /* Info.plist */,
+				1207C69E5CF80838300FF5C7 /* OrpheusWidget.entitlements */,
+				80452540DCC4E332783C1647 /* OrpheusWidget.swift */,
+				B1C35C706FA2811D23992C5C /* OrpheusWidgetIntents.swift */,
+				3DC75652C2A26406727F3D1B /* OrpheusWidgetViews.swift */,
+			);
+			path = Widget;
+			sourceTree = "<group>";
+		};
 		C07FD62DFFB44026BA9834A1 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -126,11 +179,21 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		D1E65142007D01E208E1575F /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				97E4E8BD98E4A9BAAF764776 /* OrpheusShared.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
 		E008074249D9D033207564B2 = {
 			isa = PBXGroup;
 			children = (
 				6C8025875113B7478D241F75 /* App */,
 				7F13F7D278681384C6D9A41D /* Packages */,
+				D1E65142007D01E208E1575F /* Shared */,
+				A6A0D4699FEFF14F9FC107E6 /* Widget */,
 				389715B26B8EC693F5BC13AF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -154,6 +217,23 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		5FB96E74263E464072219A64 /* OrpheusWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A63A7A10D8F673249EFA32D9 /* Build configuration list for PBXNativeTarget "OrpheusWidget" */;
+			buildPhases = (
+				79EE2425BB33685E6CE32D6B /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = OrpheusWidget;
+			packageProductDependencies = (
+			);
+			productName = OrpheusWidget;
+			productReference = 915A9F5828D57FC36DF770C1 /* OrpheusWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		7CF1D7E551E9222E3F68136C /* PianobarGUI */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 960FBBE445F693D0F0E03642 /* Build configuration list for PBXNativeTarget "PianobarGUI" */;
@@ -161,10 +241,12 @@
 				0806B093BA14A03309A95026 /* Sources */,
 				E9EB3331FD3BF37A0A9CDBC9 /* Resources */,
 				F27D7FE690545FC80AC60BA9 /* Frameworks */,
+				12579E7935109B8DC7D9190E /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				1CCAC38F720B1E421CB6C750 /* PBXTargetDependency */,
 			);
 			name = PianobarGUI;
 			packageProductDependencies = (
@@ -183,6 +265,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					5FB96E74263E464072219A64 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Manual;
+					};
 					7CF1D7E551E9222E3F68136C = {
 						DevelopmentTeam = "";
 						ProvisioningStyle = Manual;
@@ -207,6 +293,7 @@
 			projectRoot = "";
 			targets = (
 				7CF1D7E551E9222E3F68136C /* PianobarGUI */,
+				5FB96E74263E464072219A64 /* OrpheusWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -239,6 +326,7 @@
 				56B71C28564382892C6625CC /* NotificationPresenter.swift in Sources */,
 				D70DF8A974C65F39212755DB /* NowPlayingBridge.swift in Sources */,
 				F0D1D777ABDAEF27887D3867 /* NowPlayingView.swift in Sources */,
+				FEE576D8D86D73BE74930ABA /* OrpheusShared.swift in Sources */,
 				E145C93EA899C688EB5E985A /* PianobarGUIApp.swift in Sources */,
 				CBD9D95156CCB97E7067DE26 /* PlaybackCommands.swift in Sources */,
 				6C6594AF6B1288212D035626 /* PlaybackTransport.swift in Sources */,
@@ -247,13 +335,59 @@
 				563F4A76E47351576496291A /* SessionSnapshot.swift in Sources */,
 				F4E702972F0693C68B0B6784 /* StationsSidebarView.swift in Sources */,
 				658AEB12A888379C64342287 /* SystemVolume.swift in Sources */,
+				B823A063C7CE65947BC8D3F8 /* WidgetBridge.swift in Sources */,
 				A9AE47A56D923CC74F9A5EF7 /* WindowAccessor.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		79EE2425BB33685E6CE32D6B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BE6900F82DC59A50D11204E6 /* OrpheusShared.swift in Sources */,
+				4CCD9B4C7331F4F192B312A7 /* OrpheusWidget.swift in Sources */,
+				E10352E524DCCF0CCD12F052 /* OrpheusWidgetIntents.swift in Sources */,
+				11FA4C757F7A7A9FD2A8920D /* OrpheusWidgetViews.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		1CCAC38F720B1E421CB6C750 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5FB96E74263E464072219A64 /* OrpheusWidget */;
+			targetProxy = E72F597313A809050ECBB455 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		0D22070D1600E6D1A8185696 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Widget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.pianobar-gui.PianobarGUI.OrpheusWidget";
+				PRODUCT_NAME = OrpheusWidget;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
 		6F34CBD353EDC4BD39982CAC /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -275,6 +409,32 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.pianobar-gui.PianobarGUI";
 				PRODUCT_NAME = Orpheus;
 				SDKROOT = macosx;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		7CB4752D4DA86985BCC9CED0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Widget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.pianobar-gui.PianobarGUI.OrpheusWidget";
+				PRODUCT_NAME = OrpheusWidget;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.9;
 			};
 			name = Debug;
@@ -440,6 +600,15 @@
 			buildConfigurations = (
 				6F34CBD353EDC4BD39982CAC /* Debug */,
 				F2DEAFC5C1BD4FD19F4A2564 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A63A7A10D8F673249EFA32D9 /* Build configuration list for PBXNativeTarget "OrpheusWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7CB4752D4DA86985BCC9CED0 /* Debug */,
+				0D22070D1600E6D1A8185696 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

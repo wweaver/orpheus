@@ -79,6 +79,7 @@ struct MainWindowView: View {
             NavigationSplitView(columnVisibility: $visibility) {
                 StationsSidebarView(state: state, ctrl: ctrl)
                     .navigationSplitViewColumnWidth(Self.sidebarWidth)
+                    .environment(\.layoutDirection, .leftToRight)
             } detail: {
                 VStack(spacing: 0) {
                     NowPlayingView(state: state, ctrl: ctrl, availableSize: detailSize(in: geo))
@@ -89,7 +90,14 @@ struct MainWindowView: View {
                         HistoryView(state: state, isExpanded: $historyExpanded)
                     }
                 }
+                .environment(\.layoutDirection, .leftToRight)
             }
+            // NavigationSplitView always puts the sidebar on the *leading*
+            // edge, and there is no API to move it. Flipping the container to
+            // right-to-left makes "leading" the right-hand side; each column's
+            // contents are flipped straight back so only the column order
+            // changes and nothing inside is mirrored.
+            .environment(\.layoutDirection, .rightToLeft)
             .background(WindowAccessor { window = $0 })
             .onChange(of: geo.size) { newSize in
                 windowSize = newSize
