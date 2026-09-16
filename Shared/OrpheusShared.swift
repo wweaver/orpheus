@@ -85,6 +85,26 @@ struct WidgetSnapshot: Codable, Equatable {
     /// say so rather than silently dropping presses.
     var appRunning: Bool
 
+    /// Nothing to show: Orpheus has never run, has quit, or has signed out.
+    ///
+    /// Quitting clears the snapshot rather than just flipping `appRunning`.
+    /// Leaving the last song on the desktop implies playback that isn't
+    /// happening — pianobar goes down with the app, and the next launch starts
+    /// a fresh station rather than resuming mid-track.
+    static let empty = WidgetSnapshot(
+        title: "",
+        artist: "",
+        album: "",
+        stationName: "",
+        isPlaying: false,
+        progressSeconds: 0,
+        durationSeconds: 0,
+        rating: "unrated",
+        artworkFile: nil,
+        savedAt: Date(),
+        appRunning: false
+    )
+
     static let placeholder = WidgetSnapshot(
         title: "Headlights",
         artist: "Alex Warren",
@@ -177,6 +197,16 @@ enum WidgetStore {
         }
     }
 
+    /// Wipe the widget back to its empty state, cover art included.
+    ///
+    /// Writes `.empty` rather than deleting the file: the widget falls back to
+    /// the same value when nothing is on disk, and an explicit write keeps the
+    /// two paths identical while surviving a stale file being recreated.
+    static func clear() {
+        save(.empty)
+        pruneArtwork(keeping: nil, in: OrpheusShared.sharedDirectory)
+    }
+
     static func load() -> WidgetSnapshot? {
         let file = OrpheusShared.sharedDirectory.appendingPathComponent(snapshotFile)
         do {
@@ -219,8 +249,8 @@ enum WidgetStore {
     }
 
     /// The directory is ours alone and only ever holds one live cover, so
-    /// anything else is from a previous song.
-    private static func pruneArtwork(keeping name: String, in dir: URL) {
+    /// anything else is from a previous song. A nil `name` keeps none of them.
+    private static func pruneArtwork(keeping name: String?, in dir: URL) {
         let fm = FileManager.default
         guard let entries = try? fm.contentsOfDirectory(atPath: dir.path) else { return }
         for entry in entries where entry.hasPrefix("art-") && entry != name {

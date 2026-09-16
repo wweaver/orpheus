@@ -120,8 +120,13 @@ Two things about it are worth knowing before changing anything:
 - **Buttons only work while Orpheus is running**, because pianobar is a child of
   the app. Presses travel back as distributed notifications, which a sandboxed
   extension is allowed to post; `WidgetBridge` turns them into `PianobarCtrl`
-  calls. When the app has quit, the snapshot's `appRunning` flag is false and the
-  widget hides the transport rather than dropping presses silently.
+  calls. Quitting (and signing out) blanks the snapshot entirely, so the widget
+  falls back to "Nothing playing" instead of advertising a song that stopped
+  with the app and won't resume on the next launch. If the app dies without
+  running its termination hook the stale snapshot survives, and the widget
+  notices via `isLive()` — `appRunning`, plus a track that has outlived its own
+  duration by more than the grace period — and hides the transport rather than
+  dropping presses silently.
 
 Entitlements are applied after the build by `scripts/sign-entitlements.sh`
 (invoked from `install.sh`), not via `CODE_SIGN_ENTITLEMENTS` — declaring them

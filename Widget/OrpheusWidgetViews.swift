@@ -146,10 +146,12 @@ struct SmallWidgetView: View {
                 Text(snapshot.hasSong ? snapshot.title : "Nothing playing")
                     .font(.caption).fontWeight(.semibold)
                     .lineLimit(1)
-                Text(snapshot.artist)
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.75))
-                    .lineLimit(1)
+                if !snapshot.artist.isEmpty {
+                    Text(snapshot.artist)
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.75))
+                        .lineLimit(1)
+                }
 
                 if snapshot.isLive() {
                     HStack(spacing: 2) {
@@ -223,10 +225,12 @@ struct MediumWidgetView: View {
                     Text(snapshot.hasSong ? snapshot.title : "Nothing playing")
                         .font(.headline)
                         .lineLimit(1)
-                    Text(snapshot.artist)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    if !snapshot.artist.isEmpty {
+                        Text(snapshot.artist)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                 }
 
                 Spacer(minLength: 4)

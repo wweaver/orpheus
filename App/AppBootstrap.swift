@@ -92,6 +92,7 @@ final class AppBootstrap: ObservableObject {
         Task {
             await teardownPlaybackStack()
             clearPlaybackIntegrations()
+            WidgetBridge.clearSnapshot()
             needsLogin = true
         }
     }
@@ -117,6 +118,9 @@ final class AppBootstrap: ObservableObject {
             await teardownPlaybackStack()
             removeSystemObservers()
             clearPlaybackIntegrations()
+            // Playback is over and there's no account behind it any more, so
+            // the desktop shouldn't still be showing the last song.
+            WidgetBridge.clearSnapshot()
             needsLogin = true
         }
     }
@@ -249,10 +253,12 @@ final class AppBootstrap: ObservableObject {
     }
 
     private func handleWillTerminate() {
-        // Whatever else happens below, the widget's buttons stop working the
-        // moment this process exits: pianobar is our child and the distributed
-        // notification has no listener. Say so before we go.
-        WidgetBridge.markAppStopped()
+        // Whatever else happens below, playback stops and the widget's buttons
+        // stop working the moment this process exits: pianobar is our child (or
+        // gets paused just below) and the distributed notification has no
+        // listener. Leave the widget blank rather than advertising a song that
+        // isn't playing and won't resume on the next launch.
+        WidgetBridge.clearSnapshot()
         guard UserDefaults.standard.bool(forKey: Prefs.Keys.keepPianobarAlive),
               let state = playbackState
         else {

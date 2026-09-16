@@ -93,20 +93,3 @@ struct OrpheusWidgetBundle: WidgetBundle {
         OrpheusWidget()
     }
 }
-
-extension WidgetSnapshot {
-    /// Orpheus has never written a snapshot, or has been signed out.
-    static let empty = WidgetSnapshot(
-        title: "",
-        artist: "",
-        album: "",
-        stationName: "",
-        isPlaying: false,
-        progressSeconds: 0,
-        durationSeconds: 0,
-        rating: "unrated",
-        artworkFile: nil,
-        savedAt: Date(),
-        appRunning: false
-    )
-}
