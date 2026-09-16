@@ -48,14 +48,20 @@ final class WidgetBridge {
         artworkFetchURL = nil
     }
 
-    /// Record that the app is going away, so the widget can stop offering
-    /// controls that would land nowhere. Called from the termination hook
-    /// rather than `invalidate`, which also runs on sign-out and teardown.
-    static func markAppStopped() {
-        guard var snapshot = WidgetStore.load() else { return }
-        snapshot.appRunning = false
-        snapshot.isPlaying = false
-        WidgetStore.save(snapshot)
+    /// Empty the widget because there's no longer a song behind it — Orpheus is
+    /// quitting, or has signed out.
+    ///
+    /// Blanking rather than just clearing `appRunning`: the widget would
+    /// otherwise keep showing the last track on the desktop indefinitely,
+    /// implying playback that has stopped. Nothing resumes it either — pianobar
+    /// goes down with the app, and the next launch starts its station from
+    /// whatever Pandora serves next, not from that song.
+    ///
+    /// Called from the termination hook and sign-out rather than from
+    /// `invalidate`, which also runs when the playback stack is being rebuilt
+    /// under a still-running app.
+    static func clearSnapshot() {
+        WidgetStore.clear()
         WidgetCenter.shared.reloadAllTimelines()
     }
 
